@@ -1,0 +1,15 @@
+{
+  "id": "5546676b-9b8c-4201-8150-c9fbaa6819f8",
+  "name": "test",
+  "elements": [],
+  "stageWidth": 4000,
+  "stageHeight": 4000,
+  "backgroundColor": "#1a1a2e",
+  "gridSize": 20,
+  "showGrid": true,
+  "gridStyle": "lines",
+  "gridColor": "#ffffff",
+  "createdAt": "2026-04-16T10:50:56.941Z",
+  "updatedAt": "2026-04-16T10:51:05.245Z",
+  "storageFileName": "test__5546676b.shotdesigner.json"
+}

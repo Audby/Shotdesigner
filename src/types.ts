@@ -48,6 +48,7 @@ export interface Scene {
   id: string;
   name: string;
   elements: SceneElement[];
+  storageFileName?: string;
   stageWidth: number;
   stageHeight: number;
   backgroundColor: string;

@@ -262,6 +262,14 @@ body {
   color: var(--text-secondary);
 }
 
+.dropdown-note {
+  padding: 8px 10px 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
 .dropdown-empty {
   padding: 16px;
   text-align: center;

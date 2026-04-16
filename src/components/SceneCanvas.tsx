@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import { Stage, Layer, Line, Rect, Circle as KonvaCircle, Transformer } from 'react-konva';
 import Konva from 'konva';
 import { SceneElement, ElementTemplate, Tool } from '../types';
@@ -21,7 +21,11 @@ interface Props {
   stageRef: React.MutableRefObject<Konva.Stage | null>;
 }
 
-const SceneCanvas: React.FC<Props> = ({
+export interface SceneCanvasHandle {
+  exportPngDataUrl: () => Promise<string>;
+}
+
+const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
   elements,
   selectedIds,
   onSelect,
@@ -35,7 +39,7 @@ const SceneCanvas: React.FC<Props> = ({
   gridStyle,
   gridColor,
   stageRef: externalStageRef,
-}) => {
+}, ref) => {
   const internalStageRef = useRef<Konva.Stage>(null);
   const stageRef = externalStageRef || internalStageRef;
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -373,6 +377,159 @@ const SceneCanvas: React.FC<Props> = ({
     return items;
   };
 
+  const waitForNextPaint = useCallback(() => {
+    return new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+  }, []);
+
+  const restoreTransformerSelection = useCallback(() => {
+    const tr = transformerRef.current;
+    const stage = stageRef.current;
+    if (!tr || !stage) return;
+
+    if (selectedIds.length === 0) {
+      tr.nodes([]);
+      tr.getLayer()?.batchDraw();
+      return;
+    }
+
+    const nodes: Konva.Node[] = [];
+    for (const id of selectedIds) {
+      const node = stage.findOne(`#${id}`);
+      if (node) nodes.push(node);
+    }
+    tr.nodes(nodes);
+    tr.getLayer()?.batchDraw();
+  }, [selectedIds, stageRef]);
+
+  const getExportBounds = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+
+    const padding = 60;
+    const targetAspectRatio = 16 / 9;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const el of elements) {
+      if (!el.visible) continue;
+
+      const node = stage.findOne(`#${el.id}`);
+      if (!node) continue;
+
+      const rect = node.getClientRect({
+        relativeTo: stage,
+        skipTransform: false,
+        skipShadow: false,
+        skipStroke: false,
+      });
+
+      if (!Number.isFinite(rect.x) || !Number.isFinite(rect.y) || rect.width <= 0 || rect.height <= 0) {
+        continue;
+      }
+
+      minX = Math.min(minX, rect.x);
+      minY = Math.min(minY, rect.y);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      maxY = Math.max(maxY, rect.y + rect.height);
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      const visibleWidth = stageSize.width / stageScale;
+      const visibleHeight = stageSize.height / stageScale;
+      minX = -stagePos.x / stageScale;
+      minY = -stagePos.y / stageScale;
+      maxX = minX + visibleWidth;
+      maxY = minY + visibleHeight;
+    }
+
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    let width = Math.max(1, maxX - minX);
+    let height = Math.max(1, maxY - minY);
+    const currentAspectRatio = width / height;
+
+    if (currentAspectRatio > targetAspectRatio) {
+      const adjustedHeight = width / targetAspectRatio;
+      const extraHeight = adjustedHeight - height;
+      minY -= extraHeight / 2;
+      maxY += extraHeight / 2;
+      height = adjustedHeight;
+    } else if (currentAspectRatio < targetAspectRatio) {
+      const adjustedWidth = height * targetAspectRatio;
+      const extraWidth = adjustedWidth - width;
+      minX -= extraWidth / 2;
+      maxX += extraWidth / 2;
+      width = adjustedWidth;
+    }
+
+    return { minX, minY, width, height };
+  }, [elements, stagePos.x, stagePos.y, stageScale, stageSize.height, stageSize.width, stageRef]);
+
+  useImperativeHandle(ref, () => ({
+    exportPngDataUrl: async () => {
+      const stage = stageRef.current;
+      if (!stage) {
+        throw new Error('Canvas stage is unavailable');
+      }
+
+      const exportWidth = 1920;
+      const exportHeight = 1080;
+      const previousStageSize = stageSize;
+      const previousStagePos = stagePos;
+      const previousStageScale = stageScale;
+      const tr = transformerRef.current;
+
+      if (tr) {
+        tr.nodes([]);
+        tr.getLayer()?.batchDraw();
+      }
+
+      try {
+        const bounds = getExportBounds();
+        if (!bounds) {
+          throw new Error('Unable to compute export bounds');
+        }
+
+        const exportScale = Math.min(exportWidth / bounds.width, exportHeight / bounds.height);
+
+        setStageSize({ width: exportWidth, height: exportHeight });
+        setStageScale(exportScale);
+        setStagePos({
+          x: -bounds.minX * exportScale,
+          y: -bounds.minY * exportScale,
+        });
+
+        await waitForNextPaint();
+        stage.batchDraw();
+
+        return stage.toDataURL({
+          x: 0,
+          y: 0,
+          width: exportWidth,
+          height: exportHeight,
+          pixelRatio: 1,
+          mimeType: 'image/png',
+        });
+      } finally {
+        setStageSize(previousStageSize);
+        setStageScale(previousStageScale);
+        setStagePos(previousStagePos);
+        await waitForNextPaint();
+        restoreTransformerSelection();
+        stage.batchDraw();
+      }
+    },
+  }), [getExportBounds, restoreTransformerSelection, stagePos, stageRef, stageScale, stageSize, waitForNextPaint]);
+
   const sorted = [...elements].sort((a, b) => a.zIndex - b.zIndex);
   const isPanning = tool === 'pan';
 
@@ -523,6 +680,6 @@ const SceneCanvas: React.FC<Props> = ({
       </div>
     </div>
   );
-};
+});
 
 export default SceneCanvas;

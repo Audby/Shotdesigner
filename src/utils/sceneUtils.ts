@@ -1,6 +1,28 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Scene, SceneElement, ElementTemplate } from '../types';
 
+const SCENES_STORAGE_KEY = 'shotdesigner_scenes';
+
+export interface SceneSaveResult {
+  scene: Scene;
+  relativePath: string;
+}
+
+const stripSceneStorageMetadata = (scene: Scene): Scene => {
+  const { storageFileName, ...rest } = scene;
+  return rest;
+};
+
+const getLocalStorageScenes = (): Scene[] => {
+  const data = localStorage.getItem(SCENES_STORAGE_KEY);
+  if (!data) return [];
+  try {
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+};
+
 export function createScene(name: string = 'Untitled Scene'): Scene {
   return {
     id: uuidv4(),
@@ -15,6 +37,19 @@ export function createScene(name: string = 'Untitled Scene'): Scene {
     gridColor: '#ffffff',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+  };
+}
+
+export function duplicateScene(source: Scene): Scene {
+  const timestamp = new Date().toISOString();
+  const clonedScene = stripSceneStorageMetadata(JSON.parse(JSON.stringify(source)) as Scene);
+
+  return {
+    ...clonedScene,
+    id: uuidv4(),
+    name: source.name.includes('(copy)') ? source.name : `${source.name} (copy)`,
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
 }
 
@@ -73,31 +108,51 @@ export function createElementFromTemplate(
   };
 }
 
-export function saveSceneToLocalStorage(scene: Scene): void {
-  const scenes = getSavedScenes();
-  const idx = scenes.findIndex((s) => s.id === scene.id);
-  scene.updatedAt = new Date().toISOString();
-  if (idx >= 0) {
-    scenes[idx] = scene;
-  } else {
-    scenes.push(scene);
+export function saveSceneToLocalStorage(scene: Scene): SceneSaveResult {
+  const nextScene = {
+    ...scene,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (window.shotDesignerFiles) {
+    return window.shotDesignerFiles.saveScene(nextScene);
   }
-  localStorage.setItem('shotdesigner_scenes', JSON.stringify(scenes));
+
+  const cleanScene = stripSceneStorageMetadata(nextScene);
+  const scenes = getLocalStorageScenes();
+  const idx = scenes.findIndex((savedScene) => savedScene.id === cleanScene.id);
+  if (idx >= 0) {
+    scenes[idx] = cleanScene;
+  } else {
+    scenes.push(cleanScene);
+  }
+  localStorage.setItem(SCENES_STORAGE_KEY, JSON.stringify(scenes));
+
+  return {
+    scene: cleanScene,
+    relativePath: 'browser local storage',
+  };
 }
 
 export function getSavedScenes(): Scene[] {
-  const data = localStorage.getItem('shotdesigner_scenes');
-  if (!data) return [];
-  try {
-    return JSON.parse(data);
-  } catch {
-    return [];
+  if (window.shotDesignerFiles) {
+    return window.shotDesignerFiles.listScenes();
   }
+
+  return getLocalStorageScenes();
+}
+
+export function getScenesStorageLabel(): string {
+  if (window.shotDesignerFiles) {
+    return window.shotDesignerFiles.getScenesDirectoryLabel();
+  }
+
+  return 'browser local storage';
 }
 
 export function deleteSceneFromLocalStorage(id: string): void {
-  const scenes = getSavedScenes().filter((s) => s.id !== id);
-  localStorage.setItem('shotdesigner_scenes', JSON.stringify(scenes));
+  const scenes = getLocalStorageScenes().filter((scene) => scene.id !== id);
+  localStorage.setItem(SCENES_STORAGE_KEY, JSON.stringify(scenes));
 }
 
 export function exportSceneToFile(scene: Scene): void {
@@ -122,9 +177,10 @@ export function importSceneFromFile(): Promise<Scene> {
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          const scene = JSON.parse(ev.target?.result as string) as Scene;
-          scene.id = uuidv4();
-          resolve(scene);
+          const parsedScene = JSON.parse(ev.target?.result as string) as Scene;
+          const importedScene = stripSceneStorageMetadata(parsedScene);
+          importedScene.id = uuidv4();
+          resolve(importedScene);
         } catch {
           reject(new Error('Invalid file format'));
         }

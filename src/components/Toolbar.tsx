@@ -17,6 +17,8 @@ interface Props {
   onImport: () => void;
   onExportImage: () => void;
   onNew: () => void;
+  onDuplicateScene: () => void;
+  scenesStorageLabel: string;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -40,6 +42,8 @@ const Toolbar: React.FC<Props> = ({
   onImport,
   onExportImage,
   onNew,
+  onDuplicateScene,
+  scenesStorageLabel,
   onUndo,
   onRedo,
   canUndo,
@@ -49,6 +53,7 @@ const Toolbar: React.FC<Props> = ({
 }) => {
   const [showSceneMenu, setShowSceneMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedScenes = getSavedScenes();
 
   useEffect(() => {
     if (!showSceneMenu) return;
@@ -152,15 +157,21 @@ const Toolbar: React.FC<Props> = ({
               <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm5-6v-3h2v3h3v2h-3v3h-2v-3H8v-2h3z" />
             </svg>
           </button>
+          <button className="tool-btn" onClick={onDuplicateScene} title="Duplicate Current Scene">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+            </svg>
+          </button>
           <div className="dropdown-wrapper" ref={dropdownRef}>
-            <button className="tool-btn" onClick={() => setShowSceneMenu(!showSceneMenu)} title="Open Scene">
+            <button className="tool-btn" onClick={() => setShowSceneMenu(!showSceneMenu)} title={`Open Scene from ${scenesStorageLabel}`}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
               </svg>
             </button>
             {showSceneMenu && (
               <div className="dropdown-menu">
-                {getSavedScenes().map((s) => (
+                <div className="dropdown-note">Saved in {scenesStorageLabel}</div>
+                {savedScenes.map((s) => (
                   <button
                     key={s.id}
                     className="dropdown-item"
@@ -172,13 +183,13 @@ const Toolbar: React.FC<Props> = ({
                     </span>
                   </button>
                 ))}
-                {getSavedScenes().length === 0 && (
-                  <div className="dropdown-empty">No saved scenes</div>
+                {savedScenes.length === 0 && (
+                  <div className="dropdown-empty">No saved scenes in {scenesStorageLabel}</div>
                 )}
               </div>
             )}
           </div>
-          <button className="tool-btn save-btn" onClick={onSave} title="Save (Ctrl+S)">
+          <button className="tool-btn save-btn" onClick={onSave} title={`Save to ${scenesStorageLabel} (Ctrl+S)`}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" />
             </svg>

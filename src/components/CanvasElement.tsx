@@ -565,7 +565,11 @@ const CanvasElement: React.FC<Props> = ({
             });
           }}
         >
-          <Group scaleX={1 / safeScaleX} scaleY={1 / safeScaleY}>
+          <Group
+            rotation={-element.rotation}
+            scaleX={1 / safeScaleX}
+            scaleY={1 / safeScaleY}
+          >
             <Rect
               x={-labelWidth / 2}
               y={-labelHeight / 2}

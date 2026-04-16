@@ -1,10 +1,13 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
-const fs = require('fs');
 
 const isDev = process.env.NODE_ENV === 'development';
 
 function createWindow() {
+  const projectRootPath = process.cwd();
+  const userDataPath = app.getPath('userData');
+  const workspaceAppDataPath = path.join(projectRootPath, 'appdata');
+  const scenesPath = path.join(projectRootPath, 'scenes');
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -16,6 +19,14 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+      additionalArguments: [
+        `--shotdesigner-project-root=${projectRootPath}`,
+        `--shotdesigner-user-data=${userDataPath}`,
+        `--shotdesigner-workspace-appdata=${workspaceAppDataPath}`,
+        `--shotdesigner-scenes-path=${scenesPath}`,
+      ],
     },
     show: false,
   });

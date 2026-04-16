@@ -208,15 +208,35 @@ const PropertiesPanel: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="prop-group">
-        <label>{rotationLabel} ({Math.round(element.rotation)}°)</label>
-        <input
-          type="range"
-          min={0}
-          max={360}
-          value={element.rotation}
-          onChange={(e) => onChange(element.id, { rotation: Number(e.target.value) })}
-        />
+      <div className="prop-row">
+        <div className="prop-group half">
+          <label>{rotationLabel} ({Math.round(element.rotation)}°)</label>
+          <input
+            type="range"
+            min={0}
+            max={360}
+            step={1}
+            value={element.rotation}
+            onChange={(e) => onChange(element.id, { rotation: Number(e.target.value) })}
+          />
+        </div>
+        <div className="prop-group half">
+          <label>{rotationLabel} Value</label>
+          <input
+            type="number"
+            min={0}
+            max={360}
+            step={1}
+            value={element.rotation}
+            onChange={(e) => {
+              const nextValue = Number(e.target.value);
+              if (Number.isNaN(nextValue)) return;
+              onChange(element.id, {
+                rotation: Math.max(0, Math.min(360, nextValue)),
+              });
+            }}
+          />
+        </div>
       </div>
 
       <div className="prop-group">

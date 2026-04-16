@@ -4,12 +4,14 @@ import {
   createScene,
   createElementFromTemplate,
   saveSceneToLocalStorage,
+  getScenesStorageLabel,
+  duplicateScene,
   exportSceneToFile,
   importSceneFromFile,
   duplicateElement,
 } from './utils/sceneUtils';
 import { useHistory } from './hooks/useHistory';
-import SceneCanvas from './components/SceneCanvas';
+import SceneCanvas, { SceneCanvasHandle } from './components/SceneCanvas';
 import ElementLibrary from './components/ElementLibrary';
 import PropertiesPanel from './components/PropertiesPanel';
 import Toolbar from './components/Toolbar';
@@ -47,6 +49,7 @@ function App() {
     return saved ? parseInt(saved) : 260;
   });
   const stageRef = useRef<Konva.Stage>(null);
+  const sceneCanvasRef = useRef<SceneCanvasHandle>(null);
 
   // Persist panel sizes
   useEffect(() => { localStorage.setItem('shotdesigner_uiscale', String(uiScale)); }, [uiScale]);
@@ -135,10 +138,9 @@ function App() {
   );
 
   const handleSave = useCallback(() => {
-    const s = { ...scene, elements, updatedAt: new Date().toISOString() };
-    saveSceneToLocalStorage(s);
-    setScene(s);
-    toast('Scene saved!');
+    const saveResult = saveSceneToLocalStorage({ ...scene, elements });
+    setScene(saveResult.scene);
+    toast(`Scene saved to ${saveResult.relativePath}`);
   }, [scene, elements, toast]);
 
   const handleLoad = useCallback(
@@ -170,53 +172,24 @@ function App() {
   }, [resetElements, toast]);
 
   const handleExportImage = useCallback(() => {
-    const stage = stageRef.current;
-    if (!stage) { toast('No canvas to export'); return; }
+    void (async () => {
+      try {
+        const dataUrl = await sceneCanvasRef.current?.exportPngDataUrl();
+        if (!dataUrl) {
+          toast('No canvas to export');
+          return;
+        }
 
-    const tr = stage.findOne('Transformer') as Konva.Transformer | undefined;
-    if (tr) tr.nodes([]);
-    stage.batchDraw();
-
-    const padding = 60;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-    if (elements.length > 0) {
-      for (const el of elements) {
-        const halfW = (el.width * Math.abs(el.scaleX || 1)) / 2 + (el.coneLength || 0);
-        const halfH = (el.height * Math.abs(el.scaleY || 1)) / 2 + (el.coneLength || 0);
-        minX = Math.min(minX, el.x - halfW);
-        minY = Math.min(minY, el.y - halfH);
-        maxX = Math.max(maxX, el.x + halfW);
-        maxY = Math.max(maxY, el.y + halfH);
+        const link = document.createElement('a');
+        link.download = `${scene.name.replace(/[^a-z0-9]/gi, '_')}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast('Image exported!');
+      } catch {
+        toast('Image export failed');
       }
-      minX -= padding; minY -= padding; maxX += padding; maxY += padding;
-    } else {
-      minX = 0; minY = 0; maxX = 800; maxY = 600;
-    }
-
-    const dataUrl = stage.toDataURL({
-      x: minX, y: minY,
-      width: maxX - minX, height: maxY - minY,
-      pixelRatio: Math.max(2, window.devicePixelRatio || 2),
-      mimeType: 'image/png',
-    });
-
-    const link = document.createElement('a');
-    link.download = `${scene.name.replace(/[^a-z0-9]/gi, '_')}.png`;
-    link.href = dataUrl;
-    link.click();
-
-    if (selectedIds.length > 0 && tr) {
-      const nodes: Konva.Node[] = [];
-      for (const id of selectedIds) {
-        const node = stage.findOne(`#${id}`);
-        if (node) nodes.push(node);
-      }
-      tr.nodes(nodes);
-      stage.batchDraw();
-    }
-    toast('Image exported!');
-  }, [scene.name, toast, elements, selectedIds]);
+    })();
+  }, [scene.name, toast]);
 
   const handleNew = useCallback(() => {
     const s = createScene();
@@ -225,6 +198,16 @@ function App() {
     setSelectedIds([]);
     toast('New scene created');
   }, [resetElements, toast]);
+
+  const handleDuplicateScene = useCallback(() => {
+    const duplicatedScene = duplicateScene({ ...scene, elements });
+    const saveResult = saveSceneToLocalStorage(duplicatedScene);
+    setScene(saveResult.scene);
+    resetElements(saveResult.scene.elements);
+    setSelectedIds([]);
+    setShowGrid(saveResult.scene.showGrid);
+    toast(`Duplicated to ${saveResult.relativePath}`);
+  }, [elements, resetElements, scene, toast]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -297,6 +280,8 @@ function App() {
         onImport={handleImport}
         onExportImage={handleExportImage}
         onNew={handleNew}
+        onDuplicateScene={handleDuplicateScene}
+        scenesStorageLabel={getScenesStorageLabel()}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -340,6 +325,7 @@ function App() {
         <div className="resize-handle" onMouseDown={startResize('left')} />
 
         <SceneCanvas
+          ref={sceneCanvasRef}
           elements={elements}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}
