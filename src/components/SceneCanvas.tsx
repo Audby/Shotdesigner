@@ -457,27 +457,46 @@ const SceneCanvas: React.FC<Props> = ({
                 if (!el) continue;
 
                 const isStraight = lineTypes.includes(el.type);
+                const sx = node.scaleX();
+                const sy = node.scaleY();
+                const nextScaleX = Math.sign(sx) || 1;
+                const nextScaleY = Math.sign(sy) || 1;
+                const currentLabelOffX = el.labelOffsetX ?? 0;
+                const currentLabelOffY = el.labelOffsetY ?? (Math.max(el.width, el.height) / 2 + 6);
+                const labelUpdates = el.showLabel ? {
+                  labelOffsetX: currentLabelOffX * Math.abs(sx),
+                  labelOffsetY: currentLabelOffY * Math.abs(sy),
+                } : {};
 
                 if (isStraight) {
-                  const sx = node.scaleX();
                   const newWidth = Math.max(2, el.width * Math.abs(sx));
-                  node.scaleX(Math.sign(sx) || 1);
-                  node.scaleY(1);
+                  const newHeight = Math.max(1, el.height * Math.abs(sy));
+                  node.scaleX(nextScaleX);
+                  node.scaleY(nextScaleY);
                   onChange(id, {
                     x: node.x(),
                     y: node.y(),
                     rotation: node.rotation(),
                     width: newWidth,
-                    scaleX: Math.sign(sx) || 1,
-                    scaleY: 1,
+                    height: newHeight,
+                    scaleX: nextScaleX,
+                    scaleY: nextScaleY,
+                    ...labelUpdates,
                   });
                 } else {
+                  const newWidth = Math.max(5, el.width * Math.abs(sx));
+                  const newHeight = Math.max(5, el.height * Math.abs(sy));
+                  node.scaleX(nextScaleX);
+                  node.scaleY(nextScaleY);
                   onChange(id, {
                     x: node.x(),
                     y: node.y(),
                     rotation: node.rotation(),
-                    scaleX: node.scaleX(),
-                    scaleY: node.scaleY(),
+                    width: newWidth,
+                    height: newHeight,
+                    scaleX: nextScaleX,
+                    scaleY: nextScaleY,
+                    ...labelUpdates,
                   });
                 }
               }

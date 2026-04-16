@@ -98,6 +98,30 @@ const PropertiesPanel: React.FC<Props> = ({
   }
 
   const rotationLabel = element.category === 'characters' ? 'Facing Direction' : 'Rotation';
+  const effectiveScaleX = Math.max(0.0001, Math.abs(element.scaleX || 1));
+  const effectiveScaleY = Math.max(0.0001, Math.abs(element.scaleY || 1));
+  const displayedWidth = element.width * effectiveScaleX;
+  const displayedHeight = element.height * effectiveScaleY;
+  const labelAutoWidth = element.labelAutoWidth ?? true;
+  const labelWidth = Math.max(60, element.labelWidth ?? 120);
+  const labelFontSize = Math.max(8, element.labelFontSize ?? 18);
+  const labelPaddingX = Math.max(4, element.labelPaddingX ?? 12);
+  const labelPaddingY = Math.max(2, element.labelPaddingY ?? 6);
+  const labelHeight = Math.max(20, Math.ceil(labelFontSize * 1.2 + labelPaddingY * 2));
+  const defaultLabelOffsetY = (Math.max(displayedWidth, displayedHeight) / 2 + labelHeight / 2 + 6) / effectiveScaleY;
+  const normalizedLabelOffsetX = (element.labelOffsetX ?? 0) * effectiveScaleX;
+  const normalizedLabelOffsetY = (element.labelOffsetY ?? defaultLabelOffsetY) * effectiveScaleY;
+  const displayedLabelOffsetX = (element.labelOffsetX ?? 0) * (element.scaleX || 1);
+  const displayedLabelOffsetY = (element.labelOffsetY ?? defaultLabelOffsetY) * (element.scaleY || 1);
+  const labelTextColor = element.labelTextColor ?? '#ffffff';
+  const labelBackgroundColor = element.labelBackgroundColor ?? '#121212';
+  const labelBackgroundOpacity = Math.min(1, Math.max(0, element.labelBackgroundOpacity ?? 0));
+  const labelCornerRadius = Math.max(0, element.labelCornerRadius ?? Math.round(labelHeight / 2));
+  const labelShadowColor = element.labelShadowColor ?? '#000000';
+  const labelShadowBlur = Math.max(0, element.labelShadowBlur ?? Math.round(labelFontSize * 0.5));
+  const labelShadowOpacity = Math.min(1, Math.max(0, element.labelShadowOpacity ?? 0.35));
+  const labelShadowOffsetX = element.labelShadowOffsetX ?? 0;
+  const labelShadowOffsetY = element.labelShadowOffsetY ?? Math.max(1, Math.round(labelFontSize * 0.18));
 
   return (
     <div className="properties-panel">
@@ -142,8 +166,12 @@ const PropertiesPanel: React.FC<Props> = ({
           <input
             type="number"
             min={5}
-            value={Math.round(element.width)}
-            onChange={(e) => onChange(element.id, { width: Math.max(5, Number(e.target.value)) })}
+            value={Math.round(displayedWidth)}
+            onChange={(e) => onChange(element.id, {
+              width: Math.max(5, Number(e.target.value)),
+              scaleX: Math.sign(element.scaleX || 1) || 1,
+              ...(element.showLabel ? { labelOffsetX: normalizedLabelOffsetX } : {}),
+            })}
           />
         </div>
         <div className="prop-group half">
@@ -154,10 +182,14 @@ const PropertiesPanel: React.FC<Props> = ({
           <input
             type="number"
             min={element.category === 'shapes' && ['shape-line', 'shape-dashed-line', 'shape-arrow', 'shape-arrow-double'].includes(element.type) ? 1 : 5}
-            value={Math.round(element.height)}
+            value={Math.round(displayedHeight)}
             onChange={(e) => {
               const minVal = element.category === 'shapes' && ['shape-line', 'shape-dashed-line', 'shape-arrow', 'shape-arrow-double'].includes(element.type) ? 1 : 5;
-              onChange(element.id, { height: Math.max(minVal, Number(e.target.value)) });
+              onChange(element.id, {
+                height: Math.max(minVal, Number(e.target.value)),
+                scaleY: Math.sign(element.scaleY || 1) || 1,
+                ...(element.showLabel ? { labelOffsetY: normalizedLabelOffsetY } : {}),
+              });
             }}
           />
         </div>
@@ -316,7 +348,18 @@ const PropertiesPanel: React.FC<Props> = ({
             onChange={(e) => onChange(element.id, {
               showLabel: e.target.checked,
               labelOffsetX: element.labelOffsetX ?? 0,
-              labelOffsetY: element.labelOffsetY ?? (Math.max(element.width, element.height) / 2 + 6),
+              labelOffsetY: element.labelOffsetY ?? defaultLabelOffsetY,
+              labelWidth: element.labelWidth ?? 120,
+              labelAutoWidth: element.labelAutoWidth ?? true,
+              labelFontSize: element.labelFontSize ?? 18,
+              labelTextColor: element.labelTextColor ?? '#ffffff',
+              labelBackgroundColor: element.labelBackgroundColor ?? '#121212',
+              labelBackgroundOpacity: element.labelBackgroundOpacity ?? 0,
+              labelPaddingX: element.labelPaddingX ?? 12,
+              labelPaddingY: element.labelPaddingY ?? 6,
+              labelCornerRadius: element.labelCornerRadius ?? 10,
+              labelShadowColor: element.labelShadowColor ?? '#000000',
+              labelShadowOpacity: element.labelShadowOpacity ?? 0.35,
             })}
           />
           Show Label
@@ -338,6 +381,206 @@ const PropertiesPanel: React.FC<Props> = ({
           Visible
         </label>
       </div>
+
+      {element.showLabel && (
+        <>
+          <div className="panel-header">
+            <h3>Label Style</h3>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Offset X</label>
+              <input
+                type="number"
+                value={Math.round(displayedLabelOffsetX)}
+                onChange={(e) => onChange(element.id, { labelOffsetX: Number(e.target.value) / (element.scaleX || 1) })}
+              />
+            </div>
+            <div className="prop-group half">
+              <label>Offset Y</label>
+              <input
+                type="number"
+                value={Math.round(displayedLabelOffsetY)}
+                onChange={(e) => onChange(element.id, { labelOffsetY: Number(e.target.value) / (element.scaleY || 1) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={labelAutoWidth}
+                  onChange={(e) => onChange(element.id, { labelAutoWidth: e.target.checked })}
+                />
+                Auto-fit Width
+              </label>
+            </div>
+            <div className="prop-group half">
+              <label>Font Size</label>
+              <input
+                type="number"
+                min={8}
+                value={Math.round(labelFontSize)}
+                onChange={(e) => onChange(element.id, { labelFontSize: Math.max(8, Number(e.target.value)) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Corner Radius</label>
+              <input
+                type="number"
+                min={0}
+                value={Math.round(labelCornerRadius)}
+                onChange={(e) => onChange(element.id, { labelCornerRadius: Math.max(0, Number(e.target.value)) })}
+              />
+            </div>
+            {!labelAutoWidth && (
+              <div className="prop-group half">
+                <label>Width</label>
+                <input
+                  type="number"
+                  min={60}
+                  value={Math.round(labelWidth)}
+                  onChange={(e) => onChange(element.id, { labelWidth: Math.max(60, Number(e.target.value)) })}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Padding X</label>
+              <input
+                type="number"
+                min={4}
+                value={Math.round(labelPaddingX)}
+                onChange={(e) => onChange(element.id, { labelPaddingX: Math.max(4, Number(e.target.value)) })}
+              />
+            </div>
+            <div className="prop-group half">
+              <label>Padding Y</label>
+              <input
+                type="number"
+                min={2}
+                value={Math.round(labelPaddingY)}
+                onChange={(e) => onChange(element.id, { labelPaddingY: Math.max(2, Number(e.target.value)) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Background Opacity ({Math.round(labelBackgroundOpacity * 100)}%)</label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={labelBackgroundOpacity}
+                onChange={(e) => onChange(element.id, { labelBackgroundOpacity: Number(e.target.value) })}
+              />
+            </div>
+            <div className="prop-group half">
+              <label>Shadow Blur</label>
+              <input
+                type="number"
+                min={0}
+                value={Math.round(labelShadowBlur)}
+                onChange={(e) => onChange(element.id, { labelShadowBlur: Math.max(0, Number(e.target.value)) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-group">
+            <label>Text Color</label>
+            <div className="color-input-row">
+              <input
+                type="color"
+                value={labelTextColor.slice(0, 7)}
+                onChange={(e) => onChange(element.id, { labelTextColor: e.target.value })}
+              />
+              <input
+                type="text"
+                value={labelTextColor}
+                onChange={(e) => onChange(element.id, { labelTextColor: e.target.value })}
+                className="color-text"
+              />
+            </div>
+          </div>
+
+          <div className="prop-group">
+            <label>Background Color</label>
+            <div className="color-input-row">
+              <input
+                type="color"
+                value={labelBackgroundColor.slice(0, 7)}
+                onChange={(e) => onChange(element.id, { labelBackgroundColor: e.target.value })}
+              />
+              <input
+                type="text"
+                value={labelBackgroundColor}
+                onChange={(e) => onChange(element.id, { labelBackgroundColor: e.target.value })}
+                className="color-text"
+              />
+            </div>
+          </div>
+
+          <div className="prop-group">
+            <label>Shadow Color</label>
+            <div className="color-input-row">
+              <input
+                type="color"
+                value={labelShadowColor.slice(0, 7)}
+                onChange={(e) => onChange(element.id, { labelShadowColor: e.target.value })}
+              />
+              <input
+                type="text"
+                value={labelShadowColor}
+                onChange={(e) => onChange(element.id, { labelShadowColor: e.target.value })}
+                className="color-text"
+              />
+            </div>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Shadow Opacity ({Math.round(labelShadowOpacity * 100)}%)</label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={labelShadowOpacity}
+                onChange={(e) => onChange(element.id, { labelShadowOpacity: Number(e.target.value) })}
+              />
+            </div>
+            <div className="prop-group half">
+              <label>Shadow Offset X</label>
+              <input
+                type="number"
+                value={Math.round(labelShadowOffsetX)}
+                onChange={(e) => onChange(element.id, { labelShadowOffsetX: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Shadow Offset Y</label>
+              <input
+                type="number"
+                value={Math.round(labelShadowOffsetY)}
+                onChange={(e) => onChange(element.id, { labelShadowOffsetY: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="prop-actions">
         <div className="action-row">

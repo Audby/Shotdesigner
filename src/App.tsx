@@ -182,8 +182,8 @@ function App() {
 
     if (elements.length > 0) {
       for (const el of elements) {
-        const halfW = (el.width * el.scaleX) / 2 + (el.coneLength || 0);
-        const halfH = (el.height * el.scaleY) / 2 + (el.coneLength || 0);
+        const halfW = (el.width * Math.abs(el.scaleX || 1)) / 2 + (el.coneLength || 0);
+        const halfH = (el.height * Math.abs(el.scaleY || 1)) / 2 + (el.coneLength || 0);
         minX = Math.min(minX, el.x - halfW);
         minY = Math.min(minY, el.y - halfH);
         maxX = Math.max(maxX, el.x + halfW);

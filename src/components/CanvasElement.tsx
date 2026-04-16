@@ -18,6 +18,45 @@ interface ParsedColor {
   b: number;
 }
 
+const LABEL_FONT_FAMILY = 'Inter, system-ui, sans-serif';
+const LABEL_FONT_WEIGHT = '500';
+
+let textMeasureContext: CanvasRenderingContext2D | null = null;
+
+const getTextMeasureContext = (): CanvasRenderingContext2D | null => {
+  if (typeof document === 'undefined') return null;
+  if (textMeasureContext) return textMeasureContext;
+
+  const canvas = document.createElement('canvas');
+  textMeasureContext = canvas.getContext('2d');
+  return textMeasureContext;
+};
+
+const measureLabelText = (text: string, fontSize: number) => {
+  const normalizedText = text.trim() || ' ';
+  const fallbackWidth = Math.max(fontSize * 1.5, normalizedText.length * fontSize * 0.62);
+  const fallbackHeight = fontSize * 1.2;
+  const context = getTextMeasureContext();
+
+  if (!context) {
+    return {
+      width: fallbackWidth,
+      height: fallbackHeight,
+    };
+  }
+
+  context.font = `${LABEL_FONT_WEIGHT} ${fontSize}px ${LABEL_FONT_FAMILY}`;
+  const metrics = context.measureText(normalizedText);
+  const measuredHeight = metrics.actualBoundingBoxAscent || metrics.actualBoundingBoxDescent
+    ? metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+    : fallbackHeight;
+
+  return {
+    width: Math.max(fallbackWidth, metrics.width),
+    height: Math.max(fallbackHeight, measuredHeight),
+  };
+};
+
 const parseHexColor = (value: string): ParsedColor | null => {
   const normalized = value.trim().replace('#', '');
   if (![3, 4, 6, 8].includes(normalized.length)) return null;
@@ -466,8 +505,30 @@ const CanvasElement: React.FC<Props> = ({
     return renderIconObject();
   };
 
+  const elementScaleX = element.scaleX || 1;
+  const elementScaleY = element.scaleY || 1;
+  const safeScaleX = Math.abs(elementScaleX) < 0.0001 ? 1 : elementScaleX;
+  const safeScaleY = Math.abs(elementScaleY) < 0.0001 ? 1 : elementScaleY;
+  const labelAutoWidth = element.labelAutoWidth ?? true;
+  const labelFontSize = Math.max(8, element.labelFontSize ?? 18);
+  const labelTextColor = element.labelTextColor ?? '#ffffff';
+  const labelBackgroundColor = element.labelBackgroundColor ?? '#121212';
+  const labelBackgroundOpacity = Math.min(1, Math.max(0, element.labelBackgroundOpacity ?? 0));
+  const labelPaddingX = Math.max(4, element.labelPaddingX ?? 12);
+  const labelPaddingY = Math.max(2, element.labelPaddingY ?? 6);
+  const labelShadowColor = element.labelShadowColor ?? '#000000';
+  const labelShadowBlur = Math.max(0, element.labelShadowBlur ?? Math.round(labelFontSize * 0.5));
+  const labelShadowOpacity = Math.min(1, Math.max(0, element.labelShadowOpacity ?? 0.35));
+  const labelShadowOffsetX = element.labelShadowOffsetX ?? 0;
+  const labelShadowOffsetY = element.labelShadowOffsetY ?? Math.max(1, Math.round(labelFontSize * 0.18));
+  const { width: measuredLabelTextWidth, height: measuredLabelTextHeight } = measureLabelText(element.label, labelFontSize);
+  const labelWidth = labelAutoWidth
+    ? Math.max(60, Math.ceil(measuredLabelTextWidth + labelPaddingX * 2))
+    : Math.max(60, element.labelWidth ?? 120);
+  const labelHeight = Math.max(20, Math.ceil(measuredLabelTextHeight + labelPaddingY * 2));
+  const labelCornerRadius = Math.max(0, element.labelCornerRadius ?? Math.round(labelHeight / 2));
   const labelOffX = element.labelOffsetX ?? 0;
-  const labelOffY = element.labelOffsetY ?? (Math.max(element.width, element.height) / 2 + 10);
+  const labelOffY = element.labelOffsetY ?? (Math.max(element.width, element.height) / 2 + labelHeight / 2 + 6);
 
   return (
     <Group
@@ -476,8 +537,8 @@ const CanvasElement: React.FC<Props> = ({
       x={element.x}
       y={element.y}
       rotation={element.rotation}
-      scaleX={element.scaleX}
-      scaleY={element.scaleY}
+      scaleX={elementScaleX}
+      scaleY={elementScaleY}
       draggable={!element.locked}
       onClick={(e) => onSelect(element.id, e.evt)}
       onTap={() => onSelect(element.id)}
@@ -486,50 +547,60 @@ const CanvasElement: React.FC<Props> = ({
     >
       {renderShape()}
       {element.showLabel && (
-        <Group x={labelOffX} y={labelOffY}>
-          <Rect
-            x={-60}
-            y={-10}
-            width={120}
-            height={20}
-            fill="rgba(18, 18, 18, 0.7)"
-            cornerRadius={10}
-          />
-          <Text
-            text={element.label}
-            x={-60}
-            y={-6}
-            width={120}
-            align="center"
-            fontSize={12}
-            fontStyle="500"
-            fontFamily="Inter, system-ui, sans-serif"
-            fill="#ffffff"
-            draggable
-            onDragStart={(e) => {
-              e.cancelBubble = true;
-            }}
-            onDragMove={(e) => {
-              e.cancelBubble = true;
-            }}
-            onDragEnd={(e) => {
-              e.cancelBubble = true;
-              const newOffX = e.target.x();
-              const newOffY = e.target.y();
-              onChange(element.id, {
-                labelOffsetX: newOffX,
-                labelOffsetY: newOffY,
-              });
-            }}
-            hitStrokeWidth={8}
-          />
+        <Group
+          x={labelOffX}
+          y={labelOffY}
+          draggable={!element.locked}
+          onDragStart={(e) => {
+            e.cancelBubble = true;
+          }}
+          onDragMove={(e) => {
+            e.cancelBubble = true;
+          }}
+          onDragEnd={(e) => {
+            e.cancelBubble = true;
+            onChange(element.id, {
+              labelOffsetX: e.target.x(),
+              labelOffsetY: e.target.y(),
+            });
+          }}
+        >
+          <Group scaleX={1 / safeScaleX} scaleY={1 / safeScaleY}>
+            <Rect
+              x={-labelWidth / 2}
+              y={-labelHeight / 2}
+              width={labelWidth}
+              height={labelHeight}
+              fill={labelBackgroundColor}
+              opacity={labelBackgroundOpacity}
+              cornerRadius={labelCornerRadius}
+              shadowColor={labelShadowColor}
+              shadowBlur={labelShadowBlur}
+              shadowOffset={{ x: labelShadowOffsetX, y: labelShadowOffsetY }}
+              shadowOpacity={labelShadowOpacity}
+            />
+            <Text
+              text={element.label}
+              x={-labelWidth / 2 + labelPaddingX}
+              y={-labelHeight / 2}
+              width={Math.max(20, labelWidth - labelPaddingX * 2)}
+              height={labelHeight}
+              align="center"
+              verticalAlign="middle"
+              fontSize={labelFontSize}
+              fontStyle="500"
+              fontFamily="Inter, system-ui, sans-serif"
+              fill={labelTextColor}
+              listening={false}
+            />
+          </Group>
         </Group>
       )}
       {element.showLabel && isSelected && (
         <>
           {/* Connector line from element center to label */}
           <Line
-            points={[0, 0, labelOffX, labelOffY - 10]}
+            points={[0, 0, labelOffX, labelOffY]}
             stroke="rgba(99, 102, 241, 0.6)"
             strokeWidth={1.5}
             dash={[4, 4]}

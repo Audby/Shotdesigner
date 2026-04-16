@@ -25,6 +25,9 @@ export function createElementFromTemplate(
   zIndex: number
 ): SceneElement {
   const isTextBox = ['text-label', 'text-heading', 'text-note'].includes(template.type);
+  const defaultLabelFontSize = 18;
+  const defaultLabelPaddingY = 6;
+  const defaultLabelHeight = Math.max(20, Math.ceil(defaultLabelFontSize * 1.2 + defaultLabelPaddingY * 2));
   return {
     id: uuidv4(),
     type: template.type,
@@ -45,7 +48,18 @@ export function createElementFromTemplate(
     zIndex,
     showLabel: false,
     labelOffsetX: 0,
-    labelOffsetY: Math.max(template.width, template.height) / 2 + 6,
+    labelOffsetY: Math.max(template.width, template.height) / 2 + defaultLabelHeight / 2 + 6,
+    labelWidth: 120,
+    labelAutoWidth: true,
+    labelFontSize: defaultLabelFontSize,
+    labelTextColor: '#ffffff',
+    labelBackgroundColor: '#121212',
+    labelBackgroundOpacity: 0,
+    labelPaddingX: 12,
+    labelPaddingY: 6,
+    labelCornerRadius: 10,
+    labelShadowColor: '#000000',
+    labelShadowOpacity: 0.35,
     showCone: template.showCone,
     coneAngle: template.coneAngle,
     coneLength: template.coneLength,
