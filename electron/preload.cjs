@@ -231,8 +231,21 @@ const mergeScenes = (...sceneCollections) => {
   return sortScenes(Array.from(byId.values()));
 };
 
+// The legacy localStorage/LevelDB import is expensive and can resurrect
+// scenes the user deleted, so it runs at most once: a marker file records
+// that the one-time import already happened.
+const MIGRATION_MARKER = '.legacy-import-done';
+let migrationChecked = false;
+
 const migrateLegacyScenesToFiles = () => {
+  if (migrationChecked) return;
+  migrationChecked = true;
+
   try {
+    ensureScenesDirectory();
+    const markerPath = path.join(scenesPath, MIGRATION_MARKER);
+    if (fs.existsSync(markerPath)) return;
+
     const existingScenes = listSceneFiles();
     const runtimeScenes = globalThis.localStorage
       ? tryParseScenes(globalThis.localStorage.getItem(SCENES_KEY))
@@ -246,8 +259,26 @@ const migrateLegacyScenesToFiles = () => {
       if (existingIds.has(scene.id)) continue;
       saveSceneFile(scene);
     }
+
+    fs.writeFileSync(markerPath, new Date().toISOString(), 'utf8');
   } catch {
     // Ignore migration failures and let the app continue normally.
+  }
+};
+
+const deleteSceneFile = (storageFileName) => {
+  if (typeof storageFileName !== 'string' || !storageFileName.endsWith('.shotdesigner.json')) {
+    return false;
+  }
+
+  const filePath = path.join(scenesPath, path.basename(storageFileName));
+  if (!fs.existsSync(filePath)) return false;
+
+  try {
+    fs.unlinkSync(filePath);
+    return true;
+  } catch {
+    return false;
   }
 };
 
@@ -260,5 +291,6 @@ contextBridge.exposeInMainWorld('shotDesignerFiles', {
     migrateLegacyScenesToFiles();
     return saveSceneFile(scene);
   },
+  deleteScene: (storageFileName) => deleteSceneFile(storageFileName),
   getScenesDirectoryLabel: () => getScenesDirectoryLabel(),
 });

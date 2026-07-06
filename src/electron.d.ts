@@ -10,6 +10,7 @@ declare global {
     shotDesignerFiles?: {
       listScenes: () => Scene[];
       saveScene: (scene: Scene) => SceneFileSaveResult;
+      deleteScene: (storageFileName: string) => boolean;
       getScenesDirectoryLabel: () => string;
     };
   }

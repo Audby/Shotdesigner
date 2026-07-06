@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Scene, SceneElement, ElementTemplate, Tool } from './types';
 import {
   createScene,
@@ -11,6 +11,7 @@ import {
   duplicateElement,
 } from './utils/sceneUtils';
 import { useHistory } from './hooks/useHistory';
+import { elementTemplates } from './data/elementLibrary';
 import SceneCanvas, { SceneCanvasHandle } from './components/SceneCanvas';
 import ElementLibrary from './components/ElementLibrary';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -50,11 +51,67 @@ function App() {
   });
   const stageRef = useRef<Konva.Stage>(null);
   const sceneCanvasRef = useRef<SceneCanvasHandle>(null);
+  const clipboardRef = useRef<SceneElement[]>([]);
+
+  // Unsaved-changes tracking: snapshot of the content-relevant state at the
+  // last save/load, compared against the live state.
+  const makeSnapshot = (s: Scene, els: SceneElement[]) =>
+    JSON.stringify({
+      name: s.name,
+      backgroundColor: s.backgroundColor,
+      gridStyle: s.gridStyle,
+      gridColor: s.gridColor,
+      elements: els,
+    });
+  const [savedSnapshot, setSavedSnapshot] = useState<string>(() => makeSnapshot(scene, []));
+  const isDirty = useMemo(
+    () => makeSnapshot(scene, elements) !== savedSnapshot,
+    [scene, elements, savedSnapshot]
+  );
+
+  const confirmDiscard = useCallback(() => {
+    return !isDirty || window.confirm('You have unsaved changes. Discard them?');
+  }, [isDirty]);
+
+  // Warn before closing the window with unsaved work
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   // Persist panel sizes
   useEffect(() => { localStorage.setItem('shotdesigner_uiscale', String(uiScale)); }, [uiScale]);
   useEffect(() => { localStorage.setItem('shotdesigner_leftw', String(leftWidth)); }, [leftWidth]);
   useEffect(() => { localStorage.setItem('shotdesigner_rightw', String(rightWidth)); }, [rightWidth]);
+
+  // Dev aid: open the app with ?demo to seed one of each common element,
+  // handy for eyeballing the symbol set on the canvas.
+  useEffect(() => {
+    if (!window.location.search.includes('demo')) return;
+    const demoTypes = [
+      'actor-male', 'actor-female', 'group-small', 'sitting-actor', 'lying-actor', 'director',
+      'camera', 'camera-dolly', 'camera-drone', 'tripod', 'monitor', 'key-light',
+      'softbox', 'led-panel', 'practical-light', 'boom-mic', 'speaker', 'c-stand',
+      'table-rect', 'table-round', 'chair', 'armchair', 'sofa', 'bed-double',
+      'car', 'truck', 'bicycle', 'wall', 'door-open', 'window',
+      'stairs', 'column', 'tree', 'rock', 'water', 'fence',
+      'stove', 'sink', 'bathtub', 'toilet', 'piano', 'fireplace',
+      'mark-x', 'number-1', 'arrow', 'zone-area', 'path-marker', 'blocking-line',
+    ];
+    const seeded = demoTypes.flatMap((type, i) => {
+      const template = elementTemplates.find((t) => t.type === type);
+      if (!template) return [];
+      return [createElementFromTemplate(template, 140 + (i % 6) * 180, 120 + Math.floor(i / 6) * 160, i)];
+    });
+    resetElements(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toast = useCallback((msg: string) => {
     setShowToast(msg);
@@ -66,13 +123,20 @@ function App() {
 
   const handleAddElement = useCallback(
     (template: ElementTemplate) => {
-      const x = 400 + Math.random() * 200;
-      const y = 300 + Math.random() * 200;
+      // Drop new elements at the center of the current view, stepping aside
+      // if something already sits there so repeated adds don't stack.
+      const center = sceneCanvasRef.current?.getViewportCenter() ?? { x: 500, y: 400 };
+      let x = center.x;
+      let y = center.y;
+      while (elements.some((el) => Math.abs(el.x - x) < 4 && Math.abs(el.y - y) < 4)) {
+        x += 24;
+        y += 24;
+      }
       const newEl = createElementFromTemplate(template, x, y, elements.length);
       setElements((prev) => [...prev, newEl]);
       setSelectedIds([newEl.id]);
     },
-    [elements.length, setElements]
+    [elements, setElements]
   );
 
   const handleAddElementToCanvas = useCallback(
@@ -140,18 +204,21 @@ function App() {
   const handleSave = useCallback(() => {
     const saveResult = saveSceneToLocalStorage({ ...scene, elements });
     setScene(saveResult.scene);
+    setSavedSnapshot(makeSnapshot(saveResult.scene, elements));
     toast(`Scene saved to ${saveResult.relativePath}`);
   }, [scene, elements, toast]);
 
   const handleLoad = useCallback(
     (s: Scene) => {
+      if (!confirmDiscard()) return;
       setScene(s);
       resetElements(s.elements);
       setSelectedIds([]);
       setShowGrid(s.showGrid);
+      setSavedSnapshot(makeSnapshot(s, s.elements));
       toast(`Loaded: ${s.name}`);
     },
-    [resetElements, toast]
+    [confirmDiscard, resetElements, toast]
   );
 
   const handleExport = useCallback(() => {
@@ -160,16 +227,17 @@ function App() {
   }, [scene, elements, toast]);
 
   const handleImport = useCallback(async () => {
+    if (!confirmDiscard()) return;
     try {
       const imported = await importSceneFromFile();
       setScene(imported);
       resetElements(imported.elements);
       setSelectedIds([]);
-      toast(`Imported: ${imported.name}`);
+      toast(`Imported: ${imported.name} — save to keep it`);
     } catch {
       toast('Import failed');
     }
-  }, [resetElements, toast]);
+  }, [confirmDiscard, resetElements, toast]);
 
   const handleExportImage = useCallback(() => {
     void (async () => {
@@ -192,12 +260,14 @@ function App() {
   }, [scene.name, toast]);
 
   const handleNew = useCallback(() => {
+    if (!confirmDiscard()) return;
     const s = createScene();
     setScene(s);
     resetElements([]);
     setSelectedIds([]);
+    setSavedSnapshot(makeSnapshot(s, []));
     toast('New scene created');
-  }, [resetElements, toast]);
+  }, [confirmDiscard, resetElements, toast]);
 
   const handleDuplicateScene = useCallback(() => {
     const duplicatedScene = duplicateScene({ ...scene, elements });
@@ -206,6 +276,7 @@ function App() {
     resetElements(saveResult.scene.elements);
     setSelectedIds([]);
     setShowGrid(saveResult.scene.showGrid);
+    setSavedSnapshot(makeSnapshot(saveResult.scene, saveResult.scene.elements));
     toast(`Duplicated to ${saveResult.relativePath}`);
   }, [elements, resetElements, scene, toast]);
 
@@ -214,28 +285,62 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
+      const mod = e.ctrlKey || e.metaKey;
+
       if (e.key === 'Delete' || e.key === 'Backspace') handleDeleteSelected();
-      if (e.key === 'v' || e.key === 'V') setTool('select');
+      if (!mod && (e.key === 'v' || e.key === 'V')) setTool('select');
       if (e.key === 'h' || e.key === 'H') setTool('pan');
       if (e.key === 'g' || e.key === 'G') setShowGrid((p) => !p);
-      if (e.key === 's' && !e.ctrlKey && !e.metaKey) setGridSnap((p) => !p);
+      if (e.key === 's' && !mod) setGridSnap((p) => !p);
+      if ((e.key === 'f' || e.key === 'F') && !mod) sceneCanvasRef.current?.fitToContent();
       if (e.key === 'Escape') setSelectedIds([]);
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      if (mod && e.key === 'a') {
         e.preventDefault();
         setSelectedIds(elements.map((el) => el.id));
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); handleSave(); }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+      if (mod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (mod && e.key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
+      if (mod && e.key === 'y') { e.preventDefault(); redo(); }
+      if (mod && e.key === 's') { e.preventDefault(); handleSave(); }
+      if (mod && e.key === 'd') {
         e.preventDefault();
         if (selectedId) handleDuplicate(selectedId);
+      }
+
+      // Copy / paste selected elements
+      if (mod && e.key === 'c' && selectedIds.length > 0) {
+        clipboardRef.current = elements.filter((el) => selectedIds.includes(el.id));
+      }
+      if (mod && e.key === 'v' && clipboardRef.current.length > 0) {
+        e.preventDefault();
+        const maxZ = elements.length > 0 ? Math.max(...elements.map((el) => el.zIndex)) : 0;
+        const pasted = clipboardRef.current.map((el, i) => ({
+          ...duplicateElement(el),
+          zIndex: maxZ + 1 + i,
+          locked: false,
+        }));
+        setElements((prev) => [...prev, ...pasted]);
+        setSelectedIds(pasted.map((el) => el.id));
+        // Repeated pastes cascade instead of stacking
+        clipboardRef.current = pasted;
+      }
+
+      // Arrow-key nudge: 1px, or one grid cell with Shift
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedIds.length > 0) {
+        e.preventDefault();
+        const step = e.shiftKey ? scene.gridSize : 1;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        setElements((prev) =>
+          prev.map((el) =>
+            selectedIds.includes(el.id) && !el.locked ? { ...el, x: el.x + dx, y: el.y + dy } : el
+          )
+        );
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, selectedIds, elements, handleDeleteSelected, handleDuplicate, handleSave, undo, redo]);
+  }, [selectedId, selectedIds, elements, scene.gridSize, handleDeleteSelected, handleDuplicate, handleSave, setElements, undo, redo]);
 
   // Resizable divider drag handler
   const startResize = useCallback(
@@ -266,6 +371,7 @@ function App() {
   return (
     <div className="app" style={{ fontSize: `${uiScale * 100}%` }}>
       <Toolbar
+        isDirty={isDirty}
         sceneName={scene.name}
         onSceneNameChange={(name) => setScene((s) => ({ ...s, name }))}
         tool={tool}

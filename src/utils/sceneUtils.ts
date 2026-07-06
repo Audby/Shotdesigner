@@ -150,9 +150,16 @@ export function getScenesStorageLabel(): string {
   return 'browser local storage';
 }
 
-export function deleteSceneFromLocalStorage(id: string): void {
-  const scenes = getLocalStorageScenes().filter((scene) => scene.id !== id);
+export function deleteScene(scene: Scene): boolean {
+  if (window.shotDesignerFiles) {
+    return scene.storageFileName
+      ? window.shotDesignerFiles.deleteScene(scene.storageFileName)
+      : false;
+  }
+
+  const scenes = getLocalStorageScenes().filter((saved) => saved.id !== scene.id);
   localStorage.setItem(SCENES_STORAGE_KEY, JSON.stringify(scenes));
+  return true;
 }
 
 export function exportSceneToFile(scene: Scene): void {
@@ -201,6 +208,5 @@ export function duplicateElement(element: SceneElement): SceneElement {
     id: uuidv4(),
     x: element.x + 20,
     y: element.y + 20,
-    label: `${element.label} (copy)`,
   };
 }

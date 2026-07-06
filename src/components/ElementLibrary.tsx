@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { categories, elementTemplates } from '../data/elementLibrary';
 import { ElementTemplate } from '../types';
+import { SymbolSvg } from './SymbolRender';
 
 interface Props {
   onAddElement: (template: ElementTemplate) => void;
@@ -98,13 +99,14 @@ const ElementLibrary: React.FC<Props> = ({ onAddElement }) => {
             title={`Drag or click to add ${template.label}`}
           >
             <div className="element-preview">
-              <svg viewBox="0 0 24 24" width="28" height="28" strokeLinecap="round" strokeLinejoin="round">
-                {template.category === 'shapes' ? (
-                  <path d={template.iconPath} fill="none" stroke="#e0e0e0" strokeWidth="2" />
-                ) : (
-                  <path d={template.iconPath} fill="#e0e0e0" stroke="none" />
-                )}
-              </svg>
+              <SymbolSvg
+                type={template.type}
+                category={template.category}
+                color={template.defaultColor}
+                width={template.width}
+                height={template.height}
+                size={42}
+              />
             </div>
             <span className="element-name">{template.label}</span>
           </div>

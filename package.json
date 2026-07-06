@@ -58,5 +58,9 @@
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.4",
     "wait-on": "^8.0.3"
+  },
+  "allowScripts": {
+    "electron@36.9.5": true,
+    "electron-winstaller@5.4.0": true
   }
 }

@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { Group, Path, Rect, Text, Wedge, Circle, Line } from 'react-konva';
 import Konva from 'konva';
 import { SceneElement } from '../types';
+import { getSymbolPrimitives, makePalette } from '../data/symbols';
+import { KonvaSymbol } from './SymbolRender';
 
 interface Props {
   element: SceneElement;
@@ -117,22 +119,19 @@ const CanvasElement: React.FC<Props> = ({
 
   if (!element.visible) return null;
 
-  const isChar = element.category === 'characters';
-  const isLight = element.category === 'lighting';
-  const isCam = element.category === 'cameras';
-  const isSet = element.category === 'set';
-  const isMarker = element.category === 'markers';
-  
-  const selectionColor = '#6366f1';
+  const selectionColor = '#818cf8';
   const iconOutlineColor = getIconOutlineColor(element.color);
 
   const renderShape = () => {
     const w = element.width;
     const h = element.height;
-    const iconScaleX = w / 24;
-    const iconScaleY = h / 24;
 
+    // Legacy fallback for elements without a top-down symbol
+    // (keeps very old saved scenes rendering).
     const renderIconObject = () => {
+      const iconScaleX = w / 24;
+      const iconScaleY = h / 24;
+
       if (!element.iconPath) {
         return (
           <Rect
@@ -145,16 +144,9 @@ const CanvasElement: React.FC<Props> = ({
             cornerRadius={6}
             stroke={isSelected ? selectionColor : 'rgba(255,255,255,0.15)'}
             strokeWidth={isSelected ? 3 : 1}
-            shadowColor="rgba(0,0,0,0.4)"
-            shadowBlur={isSelected ? 0 : 4}
-            shadowOffset={{ x: 0, y: 2 }}
-            shadowOpacity={isSelected ? 0 : 0.5}
           />
         );
       }
-
-      const selectionPadding = Math.max(6, Math.min(w, h) * 0.18);
-      const selectionCornerRadius = Math.max(6, Math.min(w, h) * 0.24);
 
       return (
         <Group>
@@ -175,183 +167,12 @@ const CanvasElement: React.FC<Props> = ({
             scaleX={iconScaleX}
             scaleY={iconScaleY}
             opacity={0.96}
-            shadowColor="rgba(0,0,0,0.45)"
-            shadowBlur={Math.max(2, Math.min(w, h) * 0.08)}
-            shadowOffset={{ x: 0, y: 2 }}
-            shadowOpacity={0.45}
             lineJoin="round"
             lineCap="round"
           />
-          {isSelected && (
-            <Rect
-              x={-w / 2 - selectionPadding / 2}
-              y={-h / 2 - selectionPadding / 2}
-              width={w + selectionPadding}
-              height={h + selectionPadding}
-              stroke={selectionColor}
-              strokeWidth={2}
-              cornerRadius={selectionCornerRadius}
-              dash={[6, 4]}
-              fillEnabled={false}
-              listening={false}
-            />
-          )}
         </Group>
       );
     };
-
-    if (isChar) {
-      const radius = Math.min(w, h) / 2;
-      const facingLineWidth = Math.max(1.5, radius * 0.12);
-      const pointerWidth = Math.max(8, radius * 0.65);
-      const pointerHeight = Math.max(6, radius * 0.42);
-      return (
-        <>
-          <Circle
-            x={0}
-            y={0}
-            radius={radius}
-            fill={element.color}
-            opacity={0.9}
-            stroke={isSelected ? selectionColor : 'rgba(255,255,255,0.2)'}
-            strokeWidth={isSelected ? 3 : 1}
-            shadowColor="rgba(0,0,0,0.5)"
-            shadowBlur={4}
-            shadowOffset={{ x: 0, y: 2 }}
-            shadowOpacity={isSelected ? 0 : 0.5}
-          />
-          <Line
-            points={[0, -radius * 0.28, 0, -radius + 2]}
-            stroke="#ffffff"
-            strokeWidth={facingLineWidth}
-            lineCap="round"
-            opacity={0.95}
-            listening={false}
-          />
-          <Line
-            points={[
-              0, -radius - 2,
-              pointerWidth / 2, -radius + pointerHeight,
-              -pointerWidth / 2, -radius + pointerHeight,
-            ]}
-            closed
-            fill="#ffffff"
-            stroke="rgba(18,18,18,0.25)"
-            strokeWidth={1}
-            opacity={0.98}
-            listening={false}
-          />
-          {element.iconPath && (
-            <Path
-              x={-radius * 0.65}
-              y={-radius * 0.65}
-              data={element.iconPath}
-              fill="#fff"
-              opacity={0.9}
-              scaleX={(radius * 1.3) / 24}
-              scaleY={(radius * 1.3) / 24}
-            />
-          )}
-        </>
-      );
-    }
-
-    if (isLight || (isCam && element.showCone)) {
-      return (
-        <>
-          {element.showCone && (
-            <Wedge
-              x={0}
-              y={0}
-              radius={element.coneLength}
-              angle={element.coneAngle}
-              rotation={-element.coneAngle / 2}
-              fill={element.color}
-              opacity={0.15}
-              listening={false}
-            />
-          )}
-          {isLight && !element.iconPath ? (
-            <Circle
-              x={0}
-              y={0}
-              radius={Math.min(w, h) / 2}
-              fill={element.color}
-              opacity={0.9}
-              stroke={isSelected ? selectionColor : 'rgba(255,255,255,0.3)'}
-              strokeWidth={isSelected ? 3 : 1}
-            />
-          ) : (
-            renderIconObject()
-          )}
-        </>
-      );
-    }
-
-    if (isSet || element.type === 'rug' || element.type === 'floor-marking' || element.type === 'area-zone') {
-      return (
-        <Group>
-          <Rect
-            x={-w / 2}
-            y={-h / 2}
-            width={w}
-            height={h}
-            fill={element.color}
-            opacity={element.opacity}
-            stroke={isSelected ? selectionColor : 'rgba(255,255,255,0.2)'}
-            strokeWidth={isSelected ? 3 : 1}
-            cornerRadius={4}
-          />
-          {element.iconPath && w >= 20 && h >= 20 && (
-            <Path
-              x={-Math.min(w, h) * 0.35}
-              y={-Math.min(w, h) * 0.35}
-              data={element.iconPath}
-              fill="#fff"
-              opacity={0.5}
-              scaleX={(Math.min(w, h) * 0.7) / 24}
-              scaleY={(Math.min(w, h) * 0.7) / 24}
-            />
-          )}
-        </Group>
-      );
-    }
-
-    if (isMarker && element.type === 'mark-x') {
-      const s = Math.min(w, h) / 2;
-      return (
-        <Group>
-          <Line points={[-s, -s, s, s]} stroke={element.color} strokeWidth={4} lineCap="round" />
-          <Line points={[s, -s, -s, s]} stroke={element.color} strokeWidth={4} lineCap="round" />
-          {isSelected && (
-            <Rect
-              x={-s - 4} y={-s - 4} width={s * 2 + 8} height={s * 2 + 8}
-              stroke={selectionColor} strokeWidth={2} cornerRadius={2} dash={[4, 4]}
-            />
-          )}
-        </Group>
-      );
-    }
-
-    if (isMarker && element.type === 'arrow') {
-      return (
-        <Group>
-          <Line
-            points={[-w / 2, 0, w / 2, 0, w / 2 - 10, -10, w / 2, 0, w / 2 - 10, 10]}
-            stroke={element.color}
-            strokeWidth={4}
-            lineJoin="round"
-            lineCap="round"
-          />
-          {isSelected && (
-            <Rect
-              x={-w / 2 - 4} y={-14} width={w + 8} height={28}
-              stroke={selectionColor} strokeWidth={2} cornerRadius={2} dash={[4, 4]}
-            />
-          )}
-        </Group>
-      );
-    }
 
     const isTextElement = ['text-label', 'text-heading', 'text-note'].includes(element.type);
     if (isTextElement) {
@@ -407,12 +228,12 @@ const CanvasElement: React.FC<Props> = ({
 
       const isLine = ['shape-line', 'shape-dashed-line', 'shape-arrow', 'shape-arrow-double'].includes(element.type);
       const isArrow = element.type === 'shape-arrow' || element.type === 'shape-arrow-double';
-      
+
       if (isLine) {
         const bend = element.bendOffset || 0;
         const pathData = bend ? `M ${-w / 2} 0 Q 0 ${bend} ${w / 2} 0` : `M ${-w / 2} 0 L ${w / 2} 0`;
         const strokeW = isArrow ? 4 : Math.max(2, h);
-        
+
         let arrowData = '';
         if (element.type === 'shape-arrow' || element.type === 'shape-arrow-double') {
            const headLen = Math.max(8, h / 2);
@@ -441,16 +262,16 @@ const CanvasElement: React.FC<Props> = ({
 
         return (
           <Group>
-            <Path 
-              data={pathData + arrowData} 
-              stroke={element.color} 
-              strokeWidth={strokeW} 
-              hitStrokeWidth={15} 
-              lineCap="round" 
+            <Path
+              data={pathData + arrowData}
+              stroke={element.color}
+              strokeWidth={strokeW}
+              hitStrokeWidth={15}
+              lineCap="round"
               lineJoin="round"
-              strokeScaleEnabled={false} 
-              {...dashProps} 
-              {...shadowProps} 
+              strokeScaleEnabled={false}
+              {...dashProps}
+              {...shadowProps}
             />
             {isSelected && (
               <Circle
@@ -458,7 +279,7 @@ const CanvasElement: React.FC<Props> = ({
                 y={bend}
                 radius={6}
                 fill="#ffffff"
-                stroke="#6366f1"
+                stroke={selectionColor}
                 strokeWidth={2}
                 draggable
                 dragBoundFunc={function(this: Konva.Node, pos) {
@@ -502,7 +323,74 @@ const CanvasElement: React.FC<Props> = ({
       }
     }
 
-    return renderIconObject();
+    // ── Top-down symbol rendering ────────────────────────────
+    const palette = makePalette(element.color);
+    const prims = getSymbolPrimitives(element.type, element.category, w, h, palette);
+
+    const selectionPadding = Math.max(6, Math.min(w, h) * 0.18);
+    const selectionCornerRadius = Math.max(6, Math.min(w, h) * 0.24);
+
+    const cone = element.showCone && element.coneLength > 0 ? (
+      <Wedge
+        x={0}
+        y={0}
+        radius={element.coneLength}
+        angle={Math.min(360, element.coneAngle)}
+        rotation={-element.coneAngle / 2}
+        fillRadialGradientStartPoint={{ x: 0, y: 0 }}
+        fillRadialGradientEndPoint={{ x: 0, y: 0 }}
+        fillRadialGradientStartRadius={0}
+        fillRadialGradientEndRadius={element.coneLength}
+        fillRadialGradientColorStops={[0, palette.fillSoft, 1, 'rgba(0,0,0,0)']}
+        listening={false}
+      />
+    ) : null;
+
+    if (!prims) {
+      return (
+        <>
+          {cone}
+          {renderIconObject()}
+          {isSelected && (
+            <Rect
+              x={-w / 2 - selectionPadding / 2}
+              y={-h / 2 - selectionPadding / 2}
+              width={w + selectionPadding}
+              height={h + selectionPadding}
+              stroke={selectionColor}
+              strokeWidth={2}
+              cornerRadius={selectionCornerRadius}
+              dash={[6, 4]}
+              fillEnabled={false}
+              listening={false}
+            />
+          )}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {cone}
+        {/* Invisible hit area so sparse symbols stay easy to grab */}
+        <Rect x={-w / 2} y={-h / 2} width={w} height={h} fill="rgba(0,0,0,0.001)" />
+        <KonvaSymbol prims={prims} />
+        {isSelected && (
+          <Rect
+            x={-w / 2 - selectionPadding / 2}
+            y={-h / 2 - selectionPadding / 2}
+            width={w + selectionPadding}
+            height={h + selectionPadding}
+            stroke={selectionColor}
+            strokeWidth={2}
+            cornerRadius={selectionCornerRadius}
+            dash={[6, 4]}
+            fillEnabled={false}
+            listening={false}
+          />
+        )}
+      </>
+    );
   };
 
   const elementScaleX = element.scaleX || 1;
@@ -605,7 +493,7 @@ const CanvasElement: React.FC<Props> = ({
           {/* Connector line from element center to label */}
           <Line
             points={[0, 0, labelOffX, labelOffY]}
-            stroke="rgba(99, 102, 241, 0.6)"
+            stroke="rgba(129, 140, 248, 0.6)"
             strokeWidth={1.5}
             dash={[4, 4]}
             listening={false}

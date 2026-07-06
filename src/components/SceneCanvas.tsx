@@ -23,6 +23,10 @@ interface Props {
 
 export interface SceneCanvasHandle {
   exportPngDataUrl: () => Promise<string>;
+  getViewportCenter: () => { x: number; y: number };
+  zoomBy: (factor: number) => void;
+  resetZoom: () => void;
+  fitToContent: () => void;
 }
 
 const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
@@ -49,6 +53,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
   const [stageScale, setStageScale] = useState(1);
   const [isMiddleDragging, setIsMiddleDragging] = useState(false);
   const middleDragStart = useRef<{ x: number; y: number; stageX: number; stageY: number } | null>(null);
+  const [spaceHeld, setSpaceHeld] = useState(false);
 
   // Marquee selection state
   const [marquee, setMarquee] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -120,6 +125,33 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
       container.removeEventListener('auxclick', onAuxClick);
     };
   }, [stagePos.x, stagePos.y]);
+
+  // Hold Space to temporarily pan (matches the toolbar hint)
+  useEffect(() => {
+    const isTyping = (target: EventTarget | null) =>
+      target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !isTyping(e.target)) {
+        e.preventDefault();
+        setSpaceHeld(true);
+      }
+      if (e.key === 'Escape' && isMarqueeActive.current) {
+        isMarqueeActive.current = false;
+        marqueeStart.current = null;
+        setMarquee(null);
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') setSpaceHeld(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
 
   const lineTypes = ['shape-line', 'shape-dashed-line', 'shape-arrow', 'shape-arrow-double'];
 
@@ -197,7 +229,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
   const handleStageMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (e.evt.button !== 0) return;
-      if (tool !== 'select') return;
+      if (tool !== 'select' || spaceHeld) return;
 
       const clickedOnEmpty = e.target === stageRef.current ||
         (e.target as Konva.Node).getAttr?.('id') === 'background';
@@ -212,11 +244,11 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
         }
       }
     },
-    [tool, onSelect, getCanvasPointer]
+    [tool, spaceHeld, onSelect, getCanvasPointer]
   );
 
   const handleStageMouseMove = useCallback(
-    (_e: Konva.KonvaEventObject<MouseEvent>) => {
+    () => {
       if (!isMarqueeActive.current || !marqueeStart.current) return;
       const pos = getCanvasPointer();
       if (!pos) return;
@@ -474,7 +506,70 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
     return { minX, minY, width, height };
   }, [elements, stagePos.x, stagePos.y, stageScale, stageSize.height, stageSize.width, stageRef]);
 
+  const clampScale = (value: number) => Math.max(0.1, Math.min(5, value));
+
+  const zoomTo = useCallback((newScale: number) => {
+    const clamped = clampScale(newScale);
+    const cx = stageSize.width / 2;
+    const cy = stageSize.height / 2;
+    setStagePos({
+      x: cx - ((cx - stagePos.x) / stageScale) * clamped,
+      y: cy - ((cy - stagePos.y) / stageScale) * clamped,
+    });
+    setStageScale(clamped);
+  }, [stagePos.x, stagePos.y, stageScale, stageSize.width, stageSize.height]);
+
+  const zoomBy = useCallback((factor: number) => {
+    zoomTo(stageScale * factor);
+  }, [zoomTo, stageScale]);
+
+  const resetZoom = useCallback(() => {
+    zoomTo(1);
+  }, [zoomTo]);
+
+  const fitToContent = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const el of elements) {
+      if (!el.visible) continue;
+      const node = stage.findOne(`#${el.id}`);
+      if (!node) continue;
+      const rect = node.getClientRect({ relativeTo: stage });
+      if (!Number.isFinite(rect.x) || !Number.isFinite(rect.y) || rect.width <= 0 || rect.height <= 0) continue;
+      minX = Math.min(minX, rect.x);
+      minY = Math.min(minY, rect.y);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      maxY = Math.max(maxY, rect.y + rect.height);
+    }
+
+    if (!Number.isFinite(minX)) {
+      // Nothing on the canvas: recenter at 100%
+      setStageScale(1);
+      setStagePos({ x: stageSize.width / 2, y: stageSize.height / 2 });
+      return;
+    }
+
+    const pad = 80;
+    const width = Math.max(1, maxX - minX + pad * 2);
+    const height = Math.max(1, maxY - minY + pad * 2);
+    const scale = clampScale(Math.min(stageSize.width / width, stageSize.height / height));
+    setStageScale(scale);
+    setStagePos({
+      x: -((minX - pad) * scale) + (stageSize.width - width * scale) / 2,
+      y: -((minY - pad) * scale) + (stageSize.height - height * scale) / 2,
+    });
+  }, [elements, stageRef, stageSize.width, stageSize.height]);
+
   useImperativeHandle(ref, () => ({
+    getViewportCenter: () => ({
+      x: (stageSize.width / 2 - stagePos.x) / stageScale,
+      y: (stageSize.height / 2 - stagePos.y) / stageScale,
+    }),
+    zoomBy,
+    resetZoom,
+    fitToContent,
     exportPngDataUrl: async () => {
       const stage = stageRef.current;
       if (!stage) {
@@ -528,10 +623,10 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
         stage.batchDraw();
       }
     },
-  }), [getExportBounds, restoreTransformerSelection, stagePos, stageRef, stageScale, stageSize, waitForNextPaint]);
+  }), [getExportBounds, restoreTransformerSelection, stagePos, stageRef, stageScale, stageSize, waitForNextPaint, zoomBy, resetZoom, fitToContent]);
 
   const sorted = [...elements].sort((a, b) => a.zIndex - b.zIndex);
-  const isPanning = tool === 'pan';
+  const isPanning = tool === 'pan' || spaceHeld;
 
   return (
     <div
@@ -573,7 +668,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
           />
           {renderGrid()}
         </Layer>
-        <Layer>
+        <Layer listening={!isPanning}>
           {sorted.map((el) => (
             <CanvasElement
               key={el.id}
@@ -675,8 +770,20 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
           )}
         </Layer>
       </Stage>
-      <div className="canvas-zoom-indicator">
-        {Math.round(stageScale * 100)}%
+      <div className="canvas-controls">
+        <button className="canvas-ctrl-btn" onClick={() => zoomBy(1 / 1.25)} title="Zoom out">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" /></svg>
+        </button>
+        <button className="canvas-ctrl-btn zoom-readout" onClick={resetZoom} title="Reset zoom to 100%">
+          {Math.round(stageScale * 100)}%
+        </button>
+        <button className="canvas-ctrl-btn" onClick={() => zoomBy(1.25)} title="Zoom in">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <div className="canvas-ctrl-divider" />
+        <button className="canvas-ctrl-btn" onClick={fitToContent} title="Fit view to content (F)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+        </button>
       </div>
     </div>
   );
