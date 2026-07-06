@@ -1,13 +1,30 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development';
 
+const projectRootPath = process.cwd();
+const workspaceAppDataPath = path.join(projectRootPath, 'appdata');
+const scenesPath = path.join(projectRootPath, 'scenes');
+
+// Native "Open Scene" file picker, invoked from the renderer via preload.
+ipcMain.handle('shotdesigner:browse-scene', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Open Scene',
+    defaultPath: scenesPath,
+    filters: [
+      { name: 'Shot Designer Scene', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+    properties: ['openFile'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
 function createWindow() {
-  const projectRootPath = process.cwd();
   const userDataPath = app.getPath('userData');
-  const workspaceAppDataPath = path.join(projectRootPath, 'appdata');
-  const scenesPath = path.join(projectRootPath, 'scenes');
   const win = new BrowserWindow({
     width: 1400,
     height: 900,

@@ -717,6 +717,226 @@ const specs: Record<string, SpecFn> = {
     ];
   },
 
+  // Garage / Hangar / Workshop --------------------------------
+  'hangar-door': (w, h, p) => {
+    const t = lw(w, h);
+    const stub = w * 0.1;
+    const leaf = w * 0.32;
+    return [
+      // Wall stubs at each side of the opening
+      { k: 'rect', x: -w / 2, y: -h / 2, w: stub, h, fill: p.stroke },
+      { k: 'rect', x: w / 2 - stub, y: -h / 2, w: stub, h, fill: p.stroke },
+      // Opening
+      { k: 'line', pts: [-w / 2 + stub, 0, w / 2 - stub, 0], stroke: p.stroke, sw: 1.2, dash: [6, 5], opacity: 0.75 },
+      // Sliding panels, parked just inside each stub
+      { k: 'rect', x: -w / 2 + stub * 0.4, y: -h * 1.15, w: leaf, h: h * 0.6, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'rect', x: w / 2 - stub * 0.4 - leaf, y: -h * 1.15, w: leaf, h: h * 0.6, fill: p.fill, stroke: p.stroke, sw: t },
+      // Slide direction arrows
+      { k: 'line', pts: [-w * 0.05, -h * 0.85, -w * 0.14, -h * 0.85], stroke: p.detail, sw: 1.2, opacity: 0.8 },
+      { k: 'line', pts: [-w * 0.11, -h * 1.15, -w * 0.14, -h * 0.85, -w * 0.11, -h * 0.55], stroke: p.detail, sw: 1.2, opacity: 0.8 },
+      { k: 'line', pts: [w * 0.05, -h * 0.85, w * 0.14, -h * 0.85], stroke: p.detail, sw: 1.2, opacity: 0.8 },
+      { k: 'line', pts: [w * 0.11, -h * 1.15, w * 0.14, -h * 0.85, w * 0.11, -h * 0.55], stroke: p.detail, sw: 1.2, opacity: 0.8 },
+    ];
+  },
+  'roller-door': (w, h, p) => {
+    const t = lw(w, h);
+    const stub = w * 0.08;
+    return [
+      { k: 'rect', x: -w / 2, y: -h / 2, w: stub, h, fill: p.stroke },
+      { k: 'rect', x: w / 2 - stub, y: -h / 2, w: stub, h, fill: p.stroke },
+      { k: 'line', pts: [-w / 2 + stub, 0, w / 2 - stub, 0], stroke: p.fill, sw: t, dash: [3, 3] },
+      // Roll drums at each end
+      { k: 'ellipse', cx: -w / 2 + stub * 1.8, cy: 0, rx: h * 0.55, ry: h * 0.55, stroke: p.stroke, sw: 1.2 },
+      { k: 'ellipse', cx: w / 2 - stub * 1.8, cy: 0, rx: h * 0.55, ry: h * 0.55, stroke: p.stroke, sw: 1.2 },
+    ];
+  },
+  'workbench': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      ...insetRect(w, h, p, 3),
+      { k: 'ellipse', cx: -w * 0.3, cy: 0, rx: h * 0.14, ry: h * 0.14, stroke: p.detail, sw: 1.2, opacity: 0.6 },
+      { k: 'line', pts: [w * 0.1, -h * 0.14, w * 0.34, -h * 0.14], stroke: p.detail, sw: t, opacity: 0.55 },
+      { k: 'line', pts: [w * 0.05, h * 0.16, w * 0.28, h * 0.16], stroke: p.detail, sw: 1.2, opacity: 0.45 },
+    ];
+  },
+  'tool-cabinet': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w / 2, y: -h / 2, w, h, rx: 2, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'line', pts: [-w / 2 + 2, -h * 0.15, w / 2 - 2, -h * 0.15], stroke: p.detail, sw: 1, opacity: 0.6 },
+      { k: 'line', pts: [-w / 2 + 2, h * 0.18, w / 2 - 2, h * 0.18], stroke: p.detail, sw: 1, opacity: 0.6 },
+      { k: 'ellipse', cx: 0, cy: -h * 0.33, rx: 1.3, ry: 1.3, fill: p.detail, opacity: 0.8 },
+    ];
+  },
+  'tool-cart': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w * 0.42, y: -h / 2, w: w * 0.84, h, rx: 2, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'line', pts: [w * 0.42, -h * 0.3, w * 0.5, 0, w * 0.42, h * 0.3], stroke: p.stroke, sw: t },
+      { k: 'ellipse', cx: -w * 0.3, cy: -h * 0.34, rx: 1.4, ry: 1.4, fill: p.stroke },
+      { k: 'ellipse', cx: -w * 0.3, cy: h * 0.34, rx: 1.4, ry: 1.4, fill: p.stroke },
+      { k: 'ellipse', cx: w * 0.26, cy: -h * 0.34, rx: 1.4, ry: 1.4, fill: p.stroke },
+      { k: 'ellipse', cx: w * 0.26, cy: h * 0.34, rx: 1.4, ry: 1.4, fill: p.stroke },
+    ];
+  },
+  'shelving-rack': (w, h, p) => {
+    const t = lw(w, h);
+    const prims: SymbolPrimitive[] = [
+      { k: 'rect', x: -w / 2, y: -h / 2, w, h, fill: p.fillSoft, stroke: p.stroke, sw: t },
+    ];
+    for (let i = 1; i < 4; i++) {
+      prims.push({ k: 'line', pts: [-w / 2 + (w / 4) * i, -h / 2, -w / 2 + (w / 4) * i, h / 2], stroke: p.stroke, sw: 1.2, opacity: 0.8 });
+    }
+    prims.push({ k: 'line', pts: [-w / 2 + 3, 0, w / 2 - 3, 0], stroke: p.fill, sw: 1, dash: [4, 3], opacity: 0.6 });
+    return prims;
+  },
+  'pallet': (w, h, p) => {
+    const t = lw(w, h);
+    const prims: SymbolPrimitive[] = [
+      { k: 'rect', x: -w / 2, y: -h / 2, w, h, fill: p.fillSoft, stroke: p.stroke, sw: t },
+    ];
+    for (let i = 0; i < 3; i++) {
+      prims.push({ k: 'rect', x: -w / 2 + 2, y: -h * 0.36 + i * h * 0.32, w: w - 4, h: h * 0.16, fill: p.fill, opacity: 0.7 });
+    }
+    return prims;
+  },
+  'tire-stack': (w, h, p) => {
+    const r = Math.min(w, h) / 2;
+    return [
+      { k: 'ellipse', cx: r * 0.14, cy: r * 0.14, rx: r * 0.85, ry: r * 0.85, stroke: p.stroke, sw: 1.4, opacity: 0.5 },
+      { k: 'ellipse', cx: 0, cy: 0, rx: r * 0.9, ry: r * 0.9, fill: p.fill, stroke: p.stroke, sw: lw(w, h) },
+      { k: 'ellipse', cx: 0, cy: 0, rx: r * 0.42, ry: r * 0.42, stroke: p.detail, sw: 1.4, opacity: 0.8 },
+    ];
+  },
+  'oil-drum': (w, h, p) => {
+    const r = Math.min(w, h) / 2;
+    return [
+      { k: 'ellipse', cx: 0, cy: 0, rx: r, ry: r, fill: p.fill, stroke: p.stroke, sw: lw(w, h) },
+      { k: 'ellipse', cx: 0, cy: 0, rx: r * 0.7, ry: r * 0.7, stroke: p.detail, sw: 1.1, opacity: 0.55 },
+      { k: 'ellipse', cx: r * 0.34, cy: -r * 0.34, rx: r * 0.13, ry: r * 0.13, fill: p.detail, opacity: 0.7 },
+    ];
+  },
+  'jerry-can': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w / 2, y: -h / 2, w, h, rx: 2, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'line', pts: [-w * 0.3, -h * 0.24, w * 0.3, h * 0.3], stroke: p.detail, sw: 1.1, opacity: 0.6 },
+      { k: 'line', pts: [w * 0.3, -h * 0.24, -w * 0.3, h * 0.3], stroke: p.detail, sw: 1.1, opacity: 0.6 },
+      { k: 'ellipse', cx: 0, cy: -h * 0.34, rx: w * 0.14, ry: w * 0.14, fill: p.detail, opacity: 0.7 },
+    ];
+  },
+  'engine-hoist': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      // Splayed legs
+      { k: 'line', pts: [-w * 0.34, h / 2, -w * 0.18, -h * 0.1], stroke: p.stroke, sw: t * 1.2 },
+      { k: 'line', pts: [w * 0.34, h / 2, w * 0.18, -h * 0.1], stroke: p.stroke, sw: t * 1.2 },
+      { k: 'line', pts: [-w * 0.34, h / 2, w * 0.34, h / 2], stroke: p.stroke, sw: t },
+      // Boom arm + hook
+      { k: 'line', pts: [0, h * 0.1, 0, -h * 0.42], stroke: p.fill, sw: t * 1.6 },
+      { k: 'ellipse', cx: 0, cy: -h * 0.42, rx: w * 0.09, ry: w * 0.09, stroke: p.fill, sw: t },
+    ];
+  },
+  'car-lift': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w / 2, y: -h * 0.12, w: w * 0.14, h: h * 0.24, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'rect', x: w / 2 - w * 0.14, y: -h * 0.12, w: w * 0.14, h: h * 0.24, fill: p.fill, stroke: p.stroke, sw: t },
+      // Swing arms
+      { k: 'line', pts: [-w * 0.36, 0, -w * 0.1, -h * 0.3], stroke: p.fill, sw: t * 1.3 },
+      { k: 'line', pts: [-w * 0.36, 0, -w * 0.1, h * 0.3], stroke: p.fill, sw: t * 1.3 },
+      { k: 'line', pts: [w * 0.36, 0, w * 0.1, -h * 0.3], stroke: p.fill, sw: t * 1.3 },
+      { k: 'line', pts: [w * 0.36, 0, w * 0.1, h * 0.3], stroke: p.fill, sw: t * 1.3 },
+      // Vehicle footprint
+      { k: 'rect', x: -w * 0.3, y: -h / 2, w: w * 0.6, h, rx: Math.min(w, h) * 0.14, stroke: p.stroke, sw: 1.1, dash: [5, 4], opacity: 0.55 },
+    ];
+  },
+  'forklift': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w * 0.42, y: -h * 0.18, w: w * 0.84, h: h * 0.6, rx: 3, fill: p.fill, stroke: p.stroke, sw: t },
+      // Mast + forks pointing forward (-y)
+      { k: 'line', pts: [-w * 0.34, -h * 0.2, w * 0.34, -h * 0.2], stroke: p.stroke, sw: t * 1.3 },
+      { k: 'line', pts: [-w * 0.2, -h * 0.2, -w * 0.2, -h / 2], stroke: p.stroke, sw: t },
+      { k: 'line', pts: [w * 0.2, -h * 0.2, w * 0.2, -h / 2], stroke: p.stroke, sw: t },
+      // Overhead guard
+      { k: 'rect', x: -w * 0.3, y: -h * 0.08, w: w * 0.6, h: h * 0.32, stroke: p.detail, sw: 1.1, opacity: 0.6 },
+      { k: 'rect', x: -w * 0.46, y: h * 0.28, w: w * 0.92, h: h * 0.16, rx: 2, fill: p.stroke, opacity: 0.9 },
+    ];
+  },
+  'junk-pile': (w, h, p) => [
+    { k: 'line', pts: [-w * 0.48, h * 0.3, -w * 0.3, -h * 0.2, -w * 0.05, h * 0.05, w * 0.15, -h * 0.42, w * 0.38, -h * 0.05, w * 0.48, h * 0.32, 0, h * 0.46], closed: true, fill: p.fillSoft, stroke: p.stroke, sw: lw(w, h) },
+    { k: 'rect', x: -w * 0.3, y: h * 0.02, w: w * 0.18, h: h * 0.2, stroke: p.stroke, sw: 1.1, opacity: 0.7 },
+    { k: 'ellipse', cx: w * 0.18, cy: h * 0.14, rx: w * 0.09, ry: w * 0.09, stroke: p.stroke, sw: 1.1, opacity: 0.7 },
+    { k: 'line', pts: [-w * 0.02, -h * 0.16, w * 0.22, -h * 0.28], stroke: p.stroke, sw: 1.4, opacity: 0.7 },
+  ],
+  'scrap-metal': (w, h, p) => [
+    { k: 'line', pts: [-w * 0.44, h * 0.3, -w * 0.1, -h * 0.34, w * 0.08, h * 0.1], stroke: p.fill, sw: lw(w, h) },
+    { k: 'line', pts: [-w * 0.2, h * 0.36, w * 0.3, -h * 0.3], stroke: p.fill, sw: lw(w, h) },
+    { k: 'line', pts: [0, h * 0.4, w * 0.44, h * 0.06, w * 0.3, h * 0.4], closed: true, fill: p.fillSoft, stroke: p.stroke, sw: 1.2 },
+    { k: 'ellipse', cx: -w * 0.32, cy: -h * 0.1, rx: w * 0.07, ry: w * 0.07, stroke: p.stroke, sw: 1.2, opacity: 0.8 },
+  ],
+  'tarp-covered': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'path', d: `M ${-w * 0.46} ${h * 0.4} C ${-w * 0.5} ${-h * 0.1} ${-w * 0.3} ${-h * 0.44} ${-w * 0.02} ${-h * 0.4} C ${w * 0.3} ${-h * 0.46} ${w * 0.5} ${-h * 0.06} ${w * 0.46} ${h * 0.4} Z`, fill: p.fillSoft, stroke: p.stroke, sw: t },
+      { k: 'path', d: `M ${-w * 0.3} ${h * 0.4} C ${-w * 0.26} ${0} ${-w * 0.18} ${-h * 0.2} ${-w * 0.08} ${-h * 0.4}`, stroke: p.fill, sw: 1.2, opacity: 0.75 },
+      { k: 'path', d: `M ${w * 0.16} ${h * 0.4} C ${w * 0.18} ${h * 0.05} ${w * 0.24} ${-h * 0.16} ${w * 0.34} ${-h * 0.3}`, stroke: p.fill, sw: 1.2, opacity: 0.75 },
+    ];
+  },
+  'air-compressor': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w * 0.36, y: -h * 0.44, w: w * 0.72, h: h * 0.72, rx: w * 0.32, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'rect', x: -w * 0.26, y: h * 0.3, w: w * 0.52, h: h * 0.18, rx: 2, fill: p.stroke },
+      { k: 'ellipse', cx: 0, cy: -h * 0.16, rx: w * 0.12, ry: w * 0.12, stroke: p.detail, sw: 1.2, opacity: 0.7 },
+    ];
+  },
+  'scaffolding': (w, h, p) => {
+    const t = lw(w, h);
+    return [
+      { k: 'rect', x: -w / 2, y: -h / 2, w, h, stroke: p.stroke, sw: t },
+      { k: 'line', pts: [0, -h / 2, 0, h / 2], stroke: p.stroke, sw: 1.2, opacity: 0.8 },
+      { k: 'line', pts: [-w / 2, -h / 2, 0, h / 2], stroke: p.fill, sw: 1.2, opacity: 0.85 },
+      { k: 'line', pts: [0, -h / 2, w / 2, h / 2], stroke: p.fill, sw: 1.2, opacity: 0.85 },
+    ];
+  },
+  'oil-stain': (w, h, p) => [
+    { k: 'path', d: `M ${-w * 0.42} ${0} C ${-w * 0.46} ${-h * 0.36} ${-w * 0.1} ${-h * 0.5} ${w * 0.12} ${-h * 0.36} C ${w * 0.44} ${-h * 0.24} ${w * 0.5} ${h * 0.1} ${w * 0.3} ${h * 0.32} C ${w * 0.06} ${h * 0.52} ${-w * 0.3} ${h * 0.42} ${-w * 0.42} ${0} Z`, fill: p.fillSoft },
+    { k: 'ellipse', cx: -w * 0.06, cy: -h * 0.02, rx: w * 0.2, ry: h * 0.18, fill: p.fill, opacity: 0.35 },
+    { k: 'ellipse', cx: w * 0.36, cy: h * 0.34, rx: w * 0.05, ry: w * 0.05, fill: p.fillSoft },
+  ],
+  'chain': (w, h, p) => {
+    const t = Math.max(2, lw(w, h));
+    return [
+      { k: 'line', pts: [-w / 2 + 3, 0, w / 2 - 3, 0], stroke: p.fill, sw: t, dash: [t * 1.6, t * 1.1] },
+      { k: 'ellipse', cx: -w / 2 + 2, cy: 0, rx: h * 0.4, ry: h * 0.4, stroke: p.fill, sw: 1.4 },
+      { k: 'ellipse', cx: w / 2 - 2, cy: 0, rx: h * 0.4, ry: h * 0.4, stroke: p.fill, sw: 1.4 },
+    ];
+  },
+  'cable-bundle': (w, h, p) => [
+    { k: 'path', d: wavy(w * 0.9, -h * 0.12, h * 0.22, Math.max(3, Math.round(w / 14))), stroke: p.fill, sw: 1.6 },
+    { k: 'path', d: wavy(w * 0.9, h * 0.14, h * 0.22, Math.max(3, Math.round(w / 16))), stroke: p.stroke, sw: 1.6 },
+    { k: 'ellipse', cx: -w * 0.42, cy: 0, rx: h * 0.42, ry: h * 0.42, stroke: p.fill, sw: 1.4 },
+  ],
+  'spare-engine': (w, h, p) => {
+    const t = lw(w, h);
+    const prims: SymbolPrimitive[] = [
+      { k: 'rect', x: -w / 2, y: -h / 2, w, h, rx: 3, fill: p.fill, stroke: p.stroke, sw: t },
+      { k: 'ellipse', cx: 0, cy: 0, rx: Math.min(w, h) * 0.26, ry: Math.min(w, h) * 0.26, stroke: p.detail, sw: 1.4, opacity: 0.75 },
+    ];
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      prims.push({ k: 'ellipse', cx: sx * w * 0.3, cy: sy * h * 0.3, rx: 1.3, ry: 1.3, fill: p.detail, opacity: 0.7 });
+    }
+    return prims;
+  },
+  'workshop-light': (w, h, p) => glowLight(w, h, p),
+  'car-wreck': (w, h, p) => [
+    ...specs['car'](w, h, p),
+    { k: 'line', pts: [-w * 0.2, -h * 0.05, w * 0.1, h * 0.06, -w * 0.06, h * 0.16], stroke: p.detail, sw: 1.3, opacity: 0.6 },
+    { k: 'line', pts: [w * 0.12, -h * 0.32, w * 0.3, -h * 0.24], stroke: p.detail, sw: 1.3, opacity: 0.6 },
+  ],
+
   // Set pieces ------------------------------------------------
   'wall': wallBand,
   'wall-short': wallBand,
@@ -1273,6 +1493,8 @@ const categoryFallbacks: Record<string, SpecFn> = {
   },
   furniture: (w, h, p) => insetRect(w, h, p),
   props: (w, h, p) => insetRect(w, h, p),
+  workshop: (w, h, p) => insetRect(w, h, p),
+  vehicles: (w, h, p) => specs['car'](w, h, p),
   set: (w, h, p) => wallBand(w, h, p),
   house: (w, h, p) => insetRect(w, h, p),
   nature: (w, h, p) => blobSpec(w, h, p),

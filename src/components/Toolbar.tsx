@@ -14,6 +14,7 @@ interface Props {
   onToggleSnap: () => void;
   onSave: () => void;
   onLoad: (scene: Scene) => void;
+  onBrowse: () => void;
   onExport: () => void;
   onImport: () => void;
   onExportImage: () => void;
@@ -62,6 +63,7 @@ const Toolbar: React.FC<Props> = ({
   onToggleSnap,
   onSave,
   onLoad,
+  onBrowse,
   onExport,
   onImport,
   onExportImage,
@@ -255,6 +257,19 @@ const Toolbar: React.FC<Props> = ({
                 {savedScenes.length === 0 && (
                   <div className="dropdown-empty">No saved scenes yet</div>
                 )}
+                <div className="dropdown-footer">
+                  <button
+                    className="dropdown-browse"
+                    onClick={() => { setShowSceneMenu(false); onBrowse(); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" {...stroke}>
+                      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.2 3.9A2 2 0 0 0 7.5 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z" />
+                      <circle cx="11.5" cy="12.5" r="2.5" />
+                      <path d="M13.3 14.3L15.5 16.5" />
+                    </svg>
+                    Browse for a scene file…
+                  </button>
+                </div>
               </div>
             )}
           </div>

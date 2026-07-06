@@ -9,7 +9,8 @@ export interface SceneSaveResult {
 }
 
 const stripSceneStorageMetadata = (scene: Scene): Scene => {
-  const { storageFileName, ...rest } = scene;
+  const rest = { ...scene };
+  delete rest.storageFileName;
   return rest;
 };
 
@@ -196,6 +197,25 @@ export function importSceneFromFile(): Promise<Scene> {
     };
     input.click();
   });
+}
+
+export type SceneBrowseResult =
+  | { status: 'ok'; scene: Scene }
+  | { status: 'canceled' }
+  | { status: 'error' };
+
+/** Open a scene from an arbitrary file: native dialog in Electron, file input in the browser. */
+export async function browseForScene(): Promise<SceneBrowseResult> {
+  if (window.shotDesignerFiles?.browseScene) {
+    return window.shotDesignerFiles.browseScene();
+  }
+
+  try {
+    const scene = await importSceneFromFile();
+    return { status: 'ok', scene };
+  } catch {
+    return { status: 'error' };
+  }
 }
 
 export function snapToGrid(value: number, gridSize: number): number {

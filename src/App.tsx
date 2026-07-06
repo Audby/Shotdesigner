@@ -8,6 +8,7 @@ import {
   duplicateScene,
   exportSceneToFile,
   importSceneFromFile,
+  browseForScene,
   duplicateElement,
 } from './utils/sceneUtils';
 import { useHistory } from './hooks/useHistory';
@@ -103,6 +104,10 @@ function App() {
       'stairs', 'column', 'tree', 'rock', 'water', 'fence',
       'stove', 'sink', 'bathtub', 'toilet', 'piano', 'fireplace',
       'mark-x', 'number-1', 'arrow', 'zone-area', 'path-marker', 'blocking-line',
+      'hangar-door', 'roller-door', 'workbench', 'tool-cabinet', 'tool-cart', 'shelving-rack',
+      'pallet', 'tire-stack', 'oil-drum', 'jerry-can', 'engine-hoist', 'car-lift',
+      'forklift', 'junk-pile', 'scrap-metal', 'tarp-covered', 'air-compressor', 'scaffolding',
+      'oil-stain', 'chain', 'cable-bundle', 'spare-engine', 'workshop-light', 'car-wreck',
     ];
     const seeded = demoTypes.flatMap((type, i) => {
       const template = elementTemplates.find((t) => t.type === type);
@@ -225,6 +230,16 @@ function App() {
     exportSceneToFile({ ...scene, elements });
     toast('Exported!');
   }, [scene, elements, toast]);
+
+  const handleBrowse = useCallback(async () => {
+    const result = await browseForScene();
+    if (result.status === 'canceled') return;
+    if (result.status === 'error') {
+      toast('Could not open that file — not a valid scene');
+      return;
+    }
+    handleLoad(result.scene);
+  }, [handleLoad, toast]);
 
   const handleImport = useCallback(async () => {
     if (!confirmDiscard()) return;
@@ -382,6 +397,7 @@ function App() {
         onToggleSnap={() => setGridSnap((p) => !p)}
         onSave={handleSave}
         onLoad={handleLoad}
+        onBrowse={handleBrowse}
         onExport={handleExport}
         onImport={handleImport}
         onExportImage={handleExportImage}

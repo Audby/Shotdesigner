@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 const SCENES_KEY = 'shotdesigner_scenes';
 
@@ -292,5 +292,20 @@ contextBridge.exposeInMainWorld('shotDesignerFiles', {
     return saveSceneFile(scene);
   },
   deleteScene: (storageFileName) => deleteSceneFile(storageFileName),
+  browseScene: async () => {
+    const filePath = await ipcRenderer.invoke('shotdesigner:browse-scene');
+    if (!filePath) return { status: 'canceled' };
+
+    const scene = readSceneFile(filePath);
+    if (!scene) return { status: 'error' };
+
+    // Only keep the storage link when the file lives in the scenes folder;
+    // files opened from elsewhere are saved as a new copy in scenes/.
+    const inScenesDir = path.resolve(path.dirname(filePath)) === path.resolve(scenesPath);
+    if (!inScenesDir) {
+      delete scene.storageFileName;
+    }
+    return { status: 'ok', scene };
+  },
   getScenesDirectoryLabel: () => getScenesDirectoryLabel(),
 });

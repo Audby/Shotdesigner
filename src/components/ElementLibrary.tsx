@@ -33,6 +33,7 @@ const ElementLibrary: React.FC<Props> = ({ onAddElement }) => {
       furniture: '#8D6E63',
       props: '#A1887F',
       vehicles: '#546E7A',
+      workshop: '#FBC02D',
       set: '#795548',
       shapes: '#9E9E9E',
       text: '#E0E0E0',
