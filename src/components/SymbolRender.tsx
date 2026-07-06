@@ -2,8 +2,33 @@ import React from 'react';
 import { Rect, Ellipse, Line, Path, Text } from 'react-konva';
 import { SymbolPrimitive, getSymbolPrimitives, makePalette } from '../data/symbols';
 
+export interface SymbolShadow {
+  color: string;
+  blur: number;
+  opacity: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+/**
+ * Shadow props for one primitive. Only solid filled primitives cast a
+ * shadow — stroke details and translucent area fills would look like they
+ * float.
+ */
+const shadowFor = (prim: SymbolPrimitive, shadow?: SymbolShadow) => {
+  if (!shadow || prim.k === 'text') return {};
+  if (!prim.fill || (prim.opacity ?? 1) < 0.9) return {};
+  return {
+    shadowColor: shadow.color,
+    shadowBlur: shadow.blur,
+    shadowOpacity: shadow.opacity,
+    shadowOffset: { x: shadow.offsetX, y: shadow.offsetY },
+    shadowForStrokeEnabled: false,
+  };
+};
+
 /** Render symbol primitives as react-konva nodes (canvas). */
-export const KonvaSymbol: React.FC<{ prims: SymbolPrimitive[] }> = ({ prims }) => (
+export const KonvaSymbol: React.FC<{ prims: SymbolPrimitive[]; shadow?: SymbolShadow }> = ({ prims, shadow }) => (
   <>
     {prims.map((prim, i) => {
       switch (prim.k) {
@@ -22,6 +47,7 @@ export const KonvaSymbol: React.FC<{ prims: SymbolPrimitive[] }> = ({ prims }) =
               dash={prim.dash}
               opacity={prim.opacity ?? 1}
               listening={false}
+              {...shadowFor(prim, shadow)}
             />
           );
         case 'ellipse':
@@ -38,6 +64,7 @@ export const KonvaSymbol: React.FC<{ prims: SymbolPrimitive[] }> = ({ prims }) =
               dash={prim.dash}
               opacity={prim.opacity ?? 1}
               listening={false}
+              {...shadowFor(prim, shadow)}
             />
           );
         case 'line':
@@ -54,6 +81,7 @@ export const KonvaSymbol: React.FC<{ prims: SymbolPrimitive[] }> = ({ prims }) =
               lineJoin="round"
               opacity={prim.opacity ?? 1}
               listening={false}
+              {...shadowFor(prim, shadow)}
             />
           );
         case 'path':
@@ -70,6 +98,7 @@ export const KonvaSymbol: React.FC<{ prims: SymbolPrimitive[] }> = ({ prims }) =
               lineJoin="round"
               opacity={prim.opacity ?? 1}
               listening={false}
+              {...shadowFor(prim, shadow)}
             />
           );
         case 'text':

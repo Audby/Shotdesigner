@@ -23,6 +23,26 @@ ipcMain.handle('shotdesigner:browse-scene', async (event) => {
   return result.filePaths[0];
 });
 
+// Native "Save Scene As" picker. Normalizes the extension so files saved
+// into the scenes folder are picked up by the scene list.
+ipcMain.handle('shotdesigner:save-scene-as', async (event, suggestedName) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showSaveDialog(win, {
+    title: 'Save Scene As',
+    defaultPath: path.join(scenesPath, suggestedName || 'scene.shotdesigner.json'),
+    filters: [
+      { name: 'Shot Designer Scene', extensions: ['json'] },
+    ],
+  });
+  if (result.canceled || !result.filePath) return null;
+
+  let filePath = result.filePath;
+  if (!filePath.endsWith('.shotdesigner.json')) {
+    filePath = filePath.replace(/\.shotdesigner$/i, '').replace(/\.json$/i, '') + '.shotdesigner.json';
+  }
+  return filePath;
+});
+
 function createWindow() {
   const userDataPath = app.getPath('userData');
   const win = new BrowserWindow({

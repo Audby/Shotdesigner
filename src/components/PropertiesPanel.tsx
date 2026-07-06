@@ -1,6 +1,13 @@
 import React from 'react';
 import { SceneElement } from '../types';
 
+// Quick-pick palette shown under the color picker
+const COLOR_SWATCHES = [
+  '#ECEFF1', '#B0BEC5', '#607D8B', '#37474F', '#F44336',
+  '#FF7043', '#FFB300', '#FFEE58', '#66BB6A', '#26A69A',
+  '#29B6F6', '#5C6BC0', '#AB47BC', '#EC407A', '#8D6E63',
+];
+
 interface Props {
   element: SceneElement | null;
   onChange: (id: string, updates: Partial<SceneElement>) => void;
@@ -122,6 +129,15 @@ const PropertiesPanel: React.FC<Props> = ({
   const labelShadowOpacity = Math.min(1, Math.max(0, element.labelShadowOpacity ?? 0.35));
   const labelShadowOffsetX = element.labelShadowOffsetX ?? 0;
   const labelShadowOffsetY = element.labelShadowOffsetY ?? Math.max(1, Math.round(labelFontSize * 0.18));
+
+  // Drop shadow (flat shapes/text keep their own selection glow instead)
+  const supportsShadow = !['shapes', 'text'].includes(element.category);
+  const shadowEnabled = element.shadowEnabled ?? true;
+  const shadowColor = element.shadowColor ?? '#000000';
+  const shadowBlur = Math.max(0, element.shadowBlur ?? 6);
+  const shadowOpacity = Math.min(1, Math.max(0, element.shadowOpacity ?? 0.4));
+  const shadowOffsetX = element.shadowOffsetX ?? 0;
+  const shadowOffsetY = element.shadowOffsetY ?? 3;
 
   return (
     <div className="properties-panel">
@@ -266,6 +282,17 @@ const PropertiesPanel: React.FC<Props> = ({
             className="color-text"
           />
         </div>
+        <div className="color-swatches">
+          {COLOR_SWATCHES.map((swatch) => (
+            <button
+              key={swatch}
+              className={`swatch ${element.color.toLowerCase().startsWith(swatch.toLowerCase()) ? 'active' : ''}`}
+              style={{ background: swatch }}
+              onClick={() => onChange(element.id, { color: swatch })}
+              title={swatch}
+            />
+          ))}
+        </div>
       </div>
 
       {element.showCone && (
@@ -384,6 +411,16 @@ const PropertiesPanel: React.FC<Props> = ({
           />
           Show Label
         </label>
+        {supportsShadow && (
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={shadowEnabled}
+              onChange={(e) => onChange(element.id, { shadowEnabled: e.target.checked })}
+            />
+            Shadow
+          </label>
+        )}
         <label className="checkbox-label">
           <input
             type="checkbox"
@@ -401,6 +438,73 @@ const PropertiesPanel: React.FC<Props> = ({
           Visible
         </label>
       </div>
+
+      {supportsShadow && shadowEnabled && (
+        <>
+          <div className="panel-header">
+            <h3>Shadow</h3>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Opacity ({Math.round(shadowOpacity * 100)}%)</label>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={shadowOpacity}
+                onChange={(e) => onChange(element.id, { shadowOpacity: Number(e.target.value) })}
+              />
+            </div>
+            <div className="prop-group half">
+              <label>Blur</label>
+              <input
+                type="number"
+                min={0}
+                value={Math.round(shadowBlur)}
+                onChange={(e) => onChange(element.id, { shadowBlur: Math.max(0, Number(e.target.value)) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-row">
+            <div className="prop-group half">
+              <label>Offset X</label>
+              <input
+                type="number"
+                value={Math.round(shadowOffsetX)}
+                onChange={(e) => onChange(element.id, { shadowOffsetX: Number(e.target.value) })}
+              />
+            </div>
+            <div className="prop-group half">
+              <label>Offset Y</label>
+              <input
+                type="number"
+                value={Math.round(shadowOffsetY)}
+                onChange={(e) => onChange(element.id, { shadowOffsetY: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div className="prop-group">
+            <label>Shadow Color</label>
+            <div className="color-input-row">
+              <input
+                type="color"
+                value={shadowColor.slice(0, 7)}
+                onChange={(e) => onChange(element.id, { shadowColor: e.target.value })}
+              />
+              <input
+                type="text"
+                value={shadowColor}
+                onChange={(e) => onChange(element.id, { shadowColor: e.target.value })}
+                className="color-text"
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {element.showLabel && (
         <>

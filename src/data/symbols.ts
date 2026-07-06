@@ -98,11 +98,11 @@ const actor = (w: number, h: number, p: SymbolPalette, extra: SymbolPrimitive[] 
 const wallBand = (w: number, h: number, p: SymbolPalette): SymbolPrimitive[] => {
   const t = lw(w, h);
   const prims: SymbolPrimitive[] = [
-    { k: 'rect', x: -w / 2, y: -h / 2, w, h, fill: p.fillSoft, stroke: p.stroke, sw: t },
+    { k: 'rect', x: -w / 2, y: -h / 2, w, h, fill: p.fill, opacity: 0.9, stroke: p.stroke, sw: t },
   ];
-  const step = Math.max(8, h * 0.9);
+  const step = Math.max(10, h * 1.1);
   for (let x = -w / 2 + step * 0.4; x < w / 2 - 1; x += step) {
-    prims.push({ k: 'line', pts: [x, h / 2, Math.min(x + h, w / 2), -h / 2], stroke: p.stroke, sw: Math.max(1, t * 0.6), opacity: 0.7 });
+    prims.push({ k: 'line', pts: [x, h / 2, Math.min(x + h, w / 2), -h / 2], stroke: p.detail, sw: 1, opacity: 0.3 });
   }
   return prims;
 };
@@ -1442,7 +1442,7 @@ function stairsSpec(w: number, h: number, p: SymbolPalette): SymbolPrimitive[] {
 
 function areaSpec(w: number, h: number, p: SymbolPalette): SymbolPrimitive[] {
   return [
-    { k: 'rect', x: -w / 2, y: -h / 2, w, h, rx: 3, fill: p.fillSoft, stroke: p.stroke, sw: 1.4, dash: [7, 5] },
+    { k: 'rect', x: -w / 2, y: -h / 2, w, h, rx: 3, fill: p.fillSoft, opacity: 0.45, stroke: p.stroke, sw: 1.4, dash: [7, 5] },
   ];
 }
 

@@ -13,6 +13,7 @@ interface Props {
   gridSnap: boolean;
   onToggleSnap: () => void;
   onSave: () => void;
+  onSaveAs: () => void;
   onLoad: (scene: Scene) => void;
   onBrowse: () => void;
   onExport: () => void;
@@ -62,6 +63,7 @@ const Toolbar: React.FC<Props> = ({
   gridSnap,
   onToggleSnap,
   onSave,
+  onSaveAs,
   onLoad,
   onBrowse,
   onExport,
@@ -283,6 +285,17 @@ const Toolbar: React.FC<Props> = ({
               <path d="M17 21v-8H7v8M7 3v5h8" />
             </svg>
             {isDirty && <span className="save-dot" />}
+          </button>
+          <button
+            className="tool-btn"
+            onClick={onSaveAs}
+            title="Save As… choose a file and folder (Ctrl+Shift+S)"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v6" />
+              <path d="M7 3v5h8M7 21v-6h5" />
+              <path d="M18 15v6M15 18h6" />
+            </svg>
           </button>
         </div>
 

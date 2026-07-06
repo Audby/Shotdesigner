@@ -36,6 +36,12 @@ export interface SceneElement {
   showCone: boolean;
   coneAngle: number;
   coneLength: number;
+  shadowEnabled?: boolean;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOpacity?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
   bendOffset?: number;
   textContent?: string;
   fontSize?: number;
@@ -49,6 +55,8 @@ export interface Scene {
   name: string;
   elements: SceneElement[];
   storageFileName?: string;
+  /** Absolute path when the scene lives outside the scenes folder (via Save As / Browse) */
+  storageFilePath?: string;
   stageWidth: number;
   stageHeight: number;
   backgroundColor: string;

@@ -3,7 +3,7 @@ import { Group, Path, Rect, Text, Wedge, Circle, Line } from 'react-konva';
 import Konva from 'konva';
 import { SceneElement } from '../types';
 import { getSymbolPrimitives, makePalette } from '../data/symbols';
-import { KonvaSymbol } from './SymbolRender';
+import { KonvaSymbol, SymbolShadow } from './SymbolRender';
 
 interface Props {
   element: SceneElement;
@@ -327,6 +327,16 @@ const CanvasElement: React.FC<Props> = ({
     const palette = makePalette(element.color);
     const prims = getSymbolPrimitives(element.type, element.category, w, h, palette);
 
+    const shadow: SymbolShadow | undefined = (element.shadowEnabled ?? true)
+      ? {
+          color: element.shadowColor ?? '#000000',
+          blur: Math.max(0, element.shadowBlur ?? 6),
+          opacity: Math.min(1, Math.max(0, element.shadowOpacity ?? 0.4)),
+          offsetX: element.shadowOffsetX ?? 0,
+          offsetY: element.shadowOffsetY ?? 3,
+        }
+      : undefined;
+
     const selectionPadding = Math.max(6, Math.min(w, h) * 0.18);
     const selectionCornerRadius = Math.max(6, Math.min(w, h) * 0.24);
 
@@ -374,7 +384,7 @@ const CanvasElement: React.FC<Props> = ({
         {cone}
         {/* Invisible hit area so sparse symbols stay easy to grab */}
         <Rect x={-w / 2} y={-h / 2} width={w} height={h} fill="rgba(0,0,0,0.001)" />
-        <KonvaSymbol prims={prims} />
+        <KonvaSymbol prims={prims} shadow={shadow} />
         {isSelected && (
           <Rect
             x={-w / 2 - selectionPadding / 2}

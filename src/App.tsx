@@ -9,6 +9,7 @@ import {
   exportSceneToFile,
   importSceneFromFile,
   browseForScene,
+  saveSceneAs,
   duplicateElement,
 } from './utils/sceneUtils';
 import { useHistory } from './hooks/useHistory';
@@ -115,6 +116,7 @@ function App() {
       return [createElementFromTemplate(template, 140 + (i % 6) * 180, 120 + Math.floor(i / 6) * 160, i)];
     });
     resetElements(seeded);
+    if (seeded.length > 0) setSelectedIds([seeded[0].id]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -211,6 +213,18 @@ function App() {
     setScene(saveResult.scene);
     setSavedSnapshot(makeSnapshot(saveResult.scene, elements));
     toast(`Scene saved to ${saveResult.relativePath}`);
+  }, [scene, elements, toast]);
+
+  const handleSaveAs = useCallback(async () => {
+    const result = await saveSceneAs({ ...scene, elements });
+    if (result.status === 'canceled') return;
+    if (result.status === 'error') {
+      toast('Save As failed');
+      return;
+    }
+    setScene(result.scene);
+    setSavedSnapshot(makeSnapshot(result.scene, elements));
+    toast(`Saved to ${result.relativePath}`);
   }, [scene, elements, toast]);
 
   const handleLoad = useCallback(
@@ -316,7 +330,11 @@ function App() {
       if (mod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
       if (mod && e.key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
       if (mod && e.key === 'y') { e.preventDefault(); redo(); }
-      if (mod && e.key === 's') { e.preventDefault(); handleSave(); }
+      if (mod && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (e.shiftKey) void handleSaveAs();
+        else handleSave();
+      }
       if (mod && e.key === 'd') {
         e.preventDefault();
         if (selectedId) handleDuplicate(selectedId);
@@ -355,7 +373,7 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, selectedIds, elements, scene.gridSize, handleDeleteSelected, handleDuplicate, handleSave, setElements, undo, redo]);
+  }, [selectedId, selectedIds, elements, scene.gridSize, handleDeleteSelected, handleDuplicate, handleSave, handleSaveAs, setElements, undo, redo]);
 
   // Resizable divider drag handler
   const startResize = useCallback(
@@ -396,6 +414,7 @@ function App() {
         gridSnap={gridSnap}
         onToggleSnap={() => setGridSnap((p) => !p)}
         onSave={handleSave}
+        onSaveAs={handleSaveAs}
         onLoad={handleLoad}
         onBrowse={handleBrowse}
         onExport={handleExport}

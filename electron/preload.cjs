@@ -88,9 +88,25 @@ const listSceneFiles = () => {
 };
 
 const saveSceneFile = (scene) => {
+  // Scenes linked to a file outside the scenes folder (via Save As or
+  // Browse) save back to that exact path, keeping their filename.
+  if (scene.storageFilePath) {
+    const nextScene = { ...scene };
+    delete nextScene.storageFileName;
+    fs.writeFileSync(scene.storageFilePath, JSON.stringify(nextScene, null, 2), 'utf8');
+    return {
+      scene: nextScene,
+      relativePath: scene.storageFilePath,
+    };
+  }
+
   ensureScenesDirectory();
 
-  const nextFileName = buildSceneFileName(scene);
+  // Keep the existing filename (it may have been chosen via Save As);
+  // only generate one for scenes that have never been saved.
+  const nextFileName = scene.storageFileName && scene.storageFileName.endsWith('.shotdesigner.json')
+    ? path.basename(scene.storageFileName)
+    : buildSceneFileName(scene);
   const nextScene = {
     ...scene,
     storageFileName: nextFileName,
@@ -299,13 +315,40 @@ contextBridge.exposeInMainWorld('shotDesignerFiles', {
     const scene = readSceneFile(filePath);
     if (!scene) return { status: 'error' };
 
-    // Only keep the storage link when the file lives in the scenes folder;
-    // files opened from elsewhere are saved as a new copy in scenes/.
+    // Files in the scenes folder are tracked by name; files opened from
+    // elsewhere keep an absolute-path link so Ctrl+S saves back in place.
     const inScenesDir = path.resolve(path.dirname(filePath)) === path.resolve(scenesPath);
     if (!inScenesDir) {
       delete scene.storageFileName;
+      scene.storageFilePath = filePath;
     }
     return { status: 'ok', scene };
+  },
+  saveSceneAs: async (scene) => {
+    const filePath = await ipcRenderer.invoke('shotdesigner:save-scene-as', buildSceneFileName(scene));
+    if (!filePath) return { status: 'canceled' };
+
+    try {
+      const nextScene = { ...scene, updatedAt: new Date().toISOString() };
+      delete nextScene.storageFileName;
+      delete nextScene.storageFilePath;
+
+      const inScenesDir = path.resolve(path.dirname(filePath)) === path.resolve(scenesPath);
+      if (inScenesDir) {
+        nextScene.storageFileName = path.basename(filePath);
+      } else {
+        nextScene.storageFilePath = filePath;
+      }
+
+      fs.writeFileSync(filePath, JSON.stringify(nextScene, null, 2), 'utf8');
+      return {
+        status: 'ok',
+        scene: nextScene,
+        relativePath: inScenesDir ? `${getScenesDirectoryLabel()}${path.basename(filePath)}` : filePath,
+      };
+    } catch {
+      return { status: 'error' };
+    }
   },
   getScenesDirectoryLabel: () => getScenesDirectoryLabel(),
 });

@@ -11,6 +11,7 @@ export interface SceneSaveResult {
 const stripSceneStorageMetadata = (scene: Scene): Scene => {
   const rest = { ...scene };
   delete rest.storageFileName;
+  delete rest.storageFilePath;
   return rest;
 };
 
@@ -99,6 +100,7 @@ export function createElementFromTemplate(
     showCone: template.showCone,
     coneAngle: template.coneAngle,
     coneLength: template.coneLength,
+    shadowEnabled: true,
     ...(isTextBox && {
       textContent: template.type === 'text-heading' ? 'Heading' : template.type === 'text-note' ? 'Add notes here...' : 'Text',
       fontSize: template.type === 'text-heading' ? 28 : template.type === 'text-note' ? 14 : 18,
@@ -197,6 +199,23 @@ export function importSceneFromFile(): Promise<Scene> {
     };
     input.click();
   });
+}
+
+export type SceneSaveAsResult =
+  | { status: 'ok'; scene: Scene; relativePath: string }
+  | { status: 'canceled' }
+  | { status: 'error' };
+
+/** Save the scene to a user-chosen file: native dialog in Electron, download in the browser. */
+export async function saveSceneAs(scene: Scene): Promise<SceneSaveAsResult> {
+  const nextScene = { ...scene, updatedAt: new Date().toISOString() };
+
+  if (window.shotDesignerFiles?.saveSceneAs) {
+    return window.shotDesignerFiles.saveSceneAs(nextScene);
+  }
+
+  exportSceneToFile(nextScene);
+  return { status: 'ok', scene: nextScene, relativePath: 'your downloads folder' };
 }
 
 export type SceneBrowseResult =
