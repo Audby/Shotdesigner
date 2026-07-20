@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "id": "a6cc452a-eba3-4c09-ab6f-31ca99a19117",
+  "name": "Mafia",
+  "scenes": [
+    {
+      "id": "b1daecf1-c3d6-4219-980b-30ddc624f0f9",
+      "number": "4",
+      "title": "Verksted",
+      "shots": [
+        {
+          "id": "79274ba4-ddcc-47d8-8d72-5062c19139f2",
+          "number": "4A",
+          "description": "Karlos kommer inn i verksted",
+          "subjects": "",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "cdff9aa8-cad6-4b8c-82ad-3729d060ff17",
+          "number": "4B",
+          "description": "Konrad observerer Karlos som går forbi Vito",
+          "subjects": "Konrad, Vito",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "e4f3ea1e-7650-4954-b4ca-e274a947726c",
+          "number": "4C",
+          "description": "Karlos går forbi Vito og setter seg",
+          "subjects": "Vito",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "74084af3-2eea-427e-a7cf-6aec5a6ca3c3",
+          "number": "4D",
+          "description": "Karlos går forbi Vito og setter seg - vinkel 2",
+          "subjects": "Karlos, Vito",
+          "framing": "",
+          "angle": "Vinkel 2",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "a23720dd-086f-42d1-81eb-93187e2e7b13",
+          "number": "4E",
+          "description": "Konrad går til Vito, lener seg mot bilen og begynner første del av dialog, vinkel 1",
+          "subjects": "Konrad, Vito, Karlos",
+          "framing": "",
+          "angle": "Vinkel 1",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "0c4c6d28-78de-4d2d-8f7b-b7ef2b04e533",
+          "number": "4F",
+          "description": "Marco og Hugston kommer inn døra, vinkel 1",
+          "subjects": "Marco, Hugston",
+          "framing": "",
+          "angle": "Vinkel 1",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "a14f7a18-84e1-45f4-8fbb-ec2514cbadf6",
+          "number": "4G",
+          "description": "Hugston går og skifter skjorte",
+          "subjects": "Hugston",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "ab7f986f-e395-4bfd-9628-375daf71ddb7",
+          "number": "4H",
+          "description": "Hugston kommer tilbake med ny skjorte og sklir i oljesølet på bakken",
+          "subjects": "Hugston",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "shot",
+          "notes": ""
+        },
+        {
+          "id": "bff596e7-bf72-40ee-a1ee-8cf0db185f36",
+          "number": "4I",
+          "description": "Marco kommer inn døra, vinkel 2",
+          "subjects": "Marco",
+          "framing": "",
+          "angle": "Vinkel 2",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "b8159bbb-d9b0-43f0-9874-c034f6a867bc",
+          "number": "4J",
+          "description": "Konrad går til Vito, lener seg mot bilen og begynner dialog, vinkel 2",
+          "subjects": "Konrad, Vito, Karlos",
+          "framing": "",
+          "angle": "Vinkel 2",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "84dce0fd-4f89-4d8d-b50a-2c88a11ef318",
+          "number": "4K",
+          "description": "Konrad går til Vito, lener seg mot bilen og begynner dialog, vinkel 3",
+          "subjects": "Konrad, Vito, Karlos",
+          "framing": "",
+          "angle": "Vinkel 3",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "8398c67f-6cc2-43a4-b80f-bc07175cb4df",
+          "number": "4L",
+          "description": "Leo skvetter og stanger hodet sitt hardt i bilen.",
+          "subjects": "Leo",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "f2e4df1c-bc02-4076-8460-62c0984b1b91",
+          "number": "4M",
+          "description": "Karlos hyler og står og vifter bort røyk. Han gjør det enda raskere når Marco ankommer. Når Marco kommer lener han seg uanstrengt inntil bilen og later som ingenting.",
+          "subjects": "Karlos",
+          "framing": "",
+          "angle": "",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "c250fae1-f450-4ea9-97a9-386aa622a4b4",
+          "number": "4N",
+          "description": "Konrad og Vito dialog del 2, vinkel 1",
+          "subjects": "Konrad, Vito",
+          "framing": "",
+          "angle": "Vinkel 1",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "e92f4725-7b1b-45ad-948b-2234d27429fc",
+          "number": "4O",
+          "description": "Konrad og Vito dialog del 2, vinkel 2",
+          "subjects": "Konrad, Vito",
+          "framing": "",
+          "angle": "Vinkel 2",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        },
+        {
+          "id": "41d00f52-8643-4715-9191-f8acc92b9223",
+          "number": "4P",
+          "description": "Konrad og Vito dialog del 2, vinkel 3",
+          "subjects": "Konrad, Vito",
+          "framing": "",
+          "angle": "Vinkel 3",
+          "movement": "",
+          "equipment": "",
+          "cameraLens": "",
+          "setup": "",
+          "status": "planned",
+          "notes": ""
+        }
+      ]
+    }
+  ],
+  "glossary": [],
+  "subjects": [
+    {
+      "id": "95652f35-51a4-4f48-97ef-c3197088558c",
+      "name": "Konrad"
+    },
+    {
+      "id": "30ecbcbc-af96-4ef8-b84b-d001a27d4f11",
+      "name": "Vito"
+    },
+    {
+      "id": "1feb7c4b-a890-4a57-a064-bddfef94f76b",
+      "name": "Marco"
+    },
+    {
+      "id": "fe4a8c39-ee19-435b-b352-3f8bf05dd126",
+      "name": "Hugston"
+    },
+    {
+      "id": "851cb3ab-26b2-4c17-8dc0-483a16d0ce5a",
+      "name": "Leo"
+    },
+    {
+      "id": "dc767d9c-85a7-414f-919d-e2cb9d14f2bf",
+      "name": "Karlos"
+    }
+  ],
+  "createdAt": "2026-07-20T12:59:49.051Z",
+  "updatedAt": "2026-07-20T13:25:59.212Z"
+}

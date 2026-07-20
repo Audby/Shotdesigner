@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Scene, SceneElement, ElementTemplate, Tool } from './types';
+import { Scene, SceneElement, ElementTemplate, Tool, ShotListProject, WorkspaceMode } from './types';
 import {
   createScene,
   createElementFromTemplate,
   saveSceneToLocalStorage,
   getScenesStorageLabel,
   duplicateScene,
+  getSavedScenes,
   exportSceneToFile,
   importSceneFromFile,
   browseForScene,
@@ -19,6 +20,18 @@ import ElementLibrary from './components/ElementLibrary';
 import PropertiesPanel from './components/PropertiesPanel';
 import Toolbar from './components/Toolbar';
 import ElementList from './components/ElementList';
+import ShotListWorkspace from './components/ShotListWorkspace';
+import {
+  browseForShotList,
+  createShotListProject,
+  exportShotListProject,
+  getShotListsStorageLabel,
+  makeShotListSnapshot,
+  normalizeShotListProject,
+  saveShotListAs,
+  saveShotListProject,
+} from './utils/shotListUtils';
+import { exportShotListCsv, importShotListCsv } from './utils/shotListCsv';
 import Konva from 'konva';
 
 function App() {
@@ -33,6 +46,10 @@ function App() {
   } = useHistory<SceneElement[]>([]);
 
   const [scene, setScene] = useState<Scene>(createScene);
+  const [workspace, setWorkspace] = useState<WorkspaceMode>('canvas');
+  const [shotList, setShotList] = useState<ShotListProject>(createShotListProject);
+  const [selectedShotListSceneId, setSelectedShotListSceneId] = useState('');
+  const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [tool, setTool] = useState<Tool>('select');
   const [showGrid, setShowGrid] = useState(true);
@@ -70,22 +87,33 @@ function App() {
     () => makeSnapshot(scene, elements) !== savedSnapshot,
     [scene, elements, savedSnapshot]
   );
+  const [savedShotListSnapshot, setSavedShotListSnapshot] = useState<string>(
+    () => makeShotListSnapshot(shotList),
+  );
+  const isShotListDirty = useMemo(
+    () => makeShotListSnapshot(shotList) !== savedShotListSnapshot,
+    [shotList, savedShotListSnapshot],
+  );
 
   const confirmDiscard = useCallback(() => {
     return !isDirty || window.confirm('You have unsaved changes. Discard them?');
   }, [isDirty]);
 
+  const confirmShotListDiscard = useCallback(() => {
+    return !isShotListDirty || window.confirm('You have unsaved shot-list changes. Discard them?');
+  }, [isShotListDirty]);
+
   // Warn before closing the window with unsaved work
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty || isShotListDirty) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
+  }, [isDirty, isShotListDirty]);
 
   // Persist panel sizes
   useEffect(() => { localStorage.setItem('shotdesigner_uiscale', String(uiScale)); }, [uiScale]);
@@ -309,12 +337,148 @@ function App() {
     toast(`Duplicated to ${saveResult.relativePath}`);
   }, [elements, resetElements, scene, toast]);
 
+  const handleShotListSave = useCallback(() => {
+    const result = saveShotListProject(shotList);
+    setShotList(result.project);
+    setSavedShotListSnapshot(makeShotListSnapshot(result.project));
+    toast(`Shot list saved to ${result.relativePath}`);
+  }, [shotList, toast]);
+
+  const handleShotListSaveAs = useCallback(async () => {
+    const result = await saveShotListAs(shotList);
+    if (result.status === 'canceled') return;
+    if (result.status === 'error') {
+      toast('Shot-list Save As failed');
+      return;
+    }
+    setShotList(result.project);
+    setSavedShotListSnapshot(makeShotListSnapshot(result.project));
+    toast(`Shot list saved to ${result.relativePath}`);
+  }, [shotList, toast]);
+
+  const handleShotListLoad = useCallback((project: ShotListProject) => {
+    if (!confirmShotListDiscard()) return;
+    const normalized = normalizeShotListProject(project);
+    setShotList(normalized);
+    setSelectedShotListSceneId(normalized.scenes[0]?.id ?? '');
+    setSelectedShotId(null);
+    setSavedShotListSnapshot(makeShotListSnapshot(normalized));
+    setWorkspace('shotList');
+    toast(`Loaded shot list: ${normalized.name}`);
+  }, [confirmShotListDiscard, toast]);
+
+  const handleShotListBrowse = useCallback(async () => {
+    const result = await browseForShotList();
+    if (result.status === 'canceled') return;
+    if (result.status === 'error') {
+      toast('Could not open that shot-list file');
+      return;
+    }
+    handleShotListLoad(result.project);
+  }, [handleShotListLoad, toast]);
+
+  const handleShotListNew = useCallback(() => {
+    if (!confirmShotListDiscard()) return;
+    const project = createShotListProject();
+    setShotList(project);
+    setSelectedShotListSceneId(project.scenes[0]?.id ?? '');
+    setSelectedShotId(null);
+    setSavedShotListSnapshot(makeShotListSnapshot(project));
+    toast('New shot list created');
+  }, [confirmShotListDiscard, toast]);
+
+  const handleShotListCsvImport = useCallback(async () => {
+    if (!confirmShotListDiscard()) return;
+    const result = await importShotListCsv();
+    if (result.status === 'canceled') return;
+    if (result.status === 'error') {
+      toast('CSV import failed');
+      return;
+    }
+    setShotList(result.project);
+    setSelectedShotListSceneId(result.project.scenes[0]?.id ?? '');
+    setSelectedShotId(result.project.scenes[0]?.shots[0]?.id ?? null);
+    setSavedShotListSnapshot('');
+    toast(`Imported ${result.fileName} — save to keep it`);
+  }, [confirmShotListDiscard, toast]);
+
+  const handleShotListLinkCanvas = useCallback((
+    shotListSceneId: string,
+    shotId: string,
+    linkedSceneId?: string,
+  ) => {
+    setShotList((project) => ({
+      ...project,
+      scenes: project.scenes.map((shotListScene) => shotListScene.id === shotListSceneId
+        ? {
+            ...shotListScene,
+            shots: shotListScene.shots.map((shot) => shot.id === shotId
+              ? { ...shot, linkedSceneId }
+              : shot),
+          }
+        : shotListScene),
+    }));
+  }, []);
+
+  const handleCreateCanvasForShot = useCallback((shotListSceneId: string, shotId: string) => {
+    if (!confirmDiscard()) return;
+    const shotListScene = shotList.scenes.find((item) => item.id === shotListSceneId);
+    const shot = shotListScene?.shots.find((item) => item.id === shotId);
+    if (!shot || !shotListScene) return;
+
+    const label = shot.description.trim()
+      ? `${shot.number} – ${shot.description.trim().slice(0, 48)}`
+      : `${shot.number} – ${shotListScene.title}`;
+    const createdScene = createScene(label);
+    const saveResult = saveSceneToLocalStorage(createdScene);
+    setScene(saveResult.scene);
+    resetElements(saveResult.scene.elements);
+    setSelectedIds([]);
+    setShowGrid(saveResult.scene.showGrid);
+    setSavedSnapshot(makeSnapshot(saveResult.scene, saveResult.scene.elements));
+    handleShotListLinkCanvas(shotListSceneId, shotId, saveResult.scene.id);
+    setWorkspace('canvas');
+    toast(`Canvas created for shot ${shot.number}`);
+  }, [confirmDiscard, handleShotListLinkCanvas, resetElements, shotList.scenes, toast]);
+
+  const handleOpenCanvasForShot = useCallback((shotListSceneId: string, shotId: string) => {
+    if (!confirmDiscard()) return;
+    const shot = shotList.scenes
+      .find((item) => item.id === shotListSceneId)
+      ?.shots.find((item) => item.id === shotId);
+    if (!shot?.linkedSceneId) return;
+    const linkedScene = getSavedScenes().find((savedScene) => savedScene.id === shot.linkedSceneId);
+    if (!linkedScene) {
+      toast('The linked canvas could not be found');
+      return;
+    }
+    setScene(linkedScene);
+    resetElements(linkedScene.elements);
+    setSelectedIds([]);
+    setShowGrid(linkedScene.showGrid);
+    setSavedSnapshot(makeSnapshot(linkedScene, linkedScene.elements));
+    setWorkspace('canvas');
+    toast(`Opened canvas: ${linkedScene.name}`);
+  }, [confirmDiscard, resetElements, shotList.scenes, toast]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
       const mod = e.ctrlKey || e.metaKey;
+      if (mod && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (workspace === 'shotList') {
+          if (e.shiftKey) void handleShotListSaveAs();
+          else handleShotListSave();
+        } else if (e.shiftKey) {
+          void handleSaveAs();
+        } else {
+          handleSave();
+        }
+        return;
+      }
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (workspace === 'shotList') return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') handleDeleteSelected();
       if (!mod && (e.key === 'v' || e.key === 'V')) setTool('select');
@@ -330,11 +494,6 @@ function App() {
       if (mod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
       if (mod && e.key === 'z' && e.shiftKey) { e.preventDefault(); redo(); }
       if (mod && e.key === 'y') { e.preventDefault(); redo(); }
-      if (mod && (e.key === 's' || e.key === 'S')) {
-        e.preventDefault();
-        if (e.shiftKey) void handleSaveAs();
-        else handleSave();
-      }
       if (mod && e.key === 'd') {
         e.preventDefault();
         if (selectedId) handleDuplicate(selectedId);
@@ -373,7 +532,7 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, selectedIds, elements, scene.gridSize, handleDeleteSelected, handleDuplicate, handleSave, handleSaveAs, setElements, undo, redo]);
+  }, [selectedId, selectedIds, elements, scene.gridSize, workspace, handleDeleteSelected, handleDuplicate, handleSave, handleSaveAs, handleShotListSave, handleShotListSaveAs, setElements, undo, redo]);
 
   // Resizable divider drag handler
   const startResize = useCallback(
@@ -404,6 +563,8 @@ function App() {
   return (
     <div className="app" style={{ fontSize: `${uiScale * 100}%` }}>
       <Toolbar
+        workspace={workspace}
+        onWorkspaceChange={setWorkspace}
         isDirty={isDirty}
         sceneName={scene.name}
         onSceneNameChange={(name) => setScene((s) => ({ ...s, name }))}
@@ -431,7 +592,8 @@ function App() {
         onUiScaleChange={setUiScale}
       />
 
-      <div className="main-content">
+      {workspace === 'canvas' ? (
+        <div className="main-content">
         <div className="left-sidebar" style={{ width: leftWidth * uiScale }}>
           <div className="sidebar-tabs">
             <button
@@ -499,7 +661,38 @@ function App() {
             onGridColorChange={(color) => setScene((s) => ({ ...s, gridColor: color }))}
           />
         </div>
-      </div>
+        </div>
+      ) : (
+        <ShotListWorkspace
+          project={shotList}
+          isDirty={isShotListDirty}
+          uiScale={uiScale}
+          selectedSceneId={selectedShotListSceneId}
+          selectedShotId={selectedShotId}
+          savedScenes={getSavedScenes()}
+          storageLabel={getShotListsStorageLabel()}
+          onProjectChange={setShotList}
+          onSelectScene={setSelectedShotListSceneId}
+          onSelectShot={setSelectedShotId}
+          onNew={handleShotListNew}
+          onSave={handleShotListSave}
+          onSaveAs={() => { void handleShotListSaveAs(); }}
+          onLoad={handleShotListLoad}
+          onBrowse={() => { void handleShotListBrowse(); }}
+          onImportCsv={() => { void handleShotListCsvImport(); }}
+          onExportCsv={() => {
+            exportShotListCsv(shotList);
+            toast('Shot list exported as CSV');
+          }}
+          onExportJson={() => {
+            exportShotListProject(shotList);
+            toast('Shot list exported as JSON');
+          }}
+          onCreateCanvas={handleCreateCanvasForShot}
+          onOpenCanvas={handleOpenCanvasForShot}
+          onLinkCanvas={handleShotListLinkCanvas}
+        />
+      )}
 
       {showToast && <div className="toast">{showToast}</div>}
     </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Tool, Scene } from '../types';
+import { Tool, Scene, WorkspaceMode } from '../types';
 import { getSavedScenes, deleteScene } from '../utils/sceneUtils';
 
 interface Props {
+  workspace: WorkspaceMode;
+  onWorkspaceChange: (workspace: WorkspaceMode) => void;
   isDirty: boolean;
   sceneName: string;
   onSceneNameChange: (name: string) => void;
@@ -53,6 +55,8 @@ const formatWhen = (iso: string): string => {
 };
 
 const Toolbar: React.FC<Props> = ({
+  workspace,
+  onWorkspaceChange,
   isDirty,
   sceneName,
   onSceneNameChange,
@@ -126,21 +130,41 @@ const Toolbar: React.FC<Props> = ({
           <span className="app-title">Shot Designer</span>
         </div>
 
-        <div className="toolbar-divider" />
-
-        <div className="scene-name-wrapper">
-          <input
-            type="text"
-            className="scene-name-input"
-            value={sceneName}
-            onChange={(e) => onSceneNameChange(e.target.value)}
-            title="Scene name"
-          />
-          {isDirty && <span className="dirty-dot" title="Unsaved changes" />}
+        <div className="workspace-switcher" aria-label="Workspace">
+          <button
+            className={workspace === 'canvas' ? 'active' : ''}
+            onClick={() => onWorkspaceChange('canvas')}
+          >
+            Canvas
+          </button>
+          <button
+            className={workspace === 'shotList' ? 'active' : ''}
+            onClick={() => onWorkspaceChange('shotList')}
+          >
+            Shot List
+          </button>
         </div>
+
+        {workspace === 'canvas' && (
+          <>
+            <div className="toolbar-divider" />
+            <div className="scene-name-wrapper">
+              <input
+                type="text"
+                className="scene-name-input"
+                value={sceneName}
+                onChange={(e) => onSceneNameChange(e.target.value)}
+                title="Scene name"
+              />
+              {isDirty && <span className="dirty-dot" title="Unsaved changes" />}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="toolbar-center">
+        {workspace === 'canvas' ? (
+          <>
         <div className="tool-group">
           <button
             className={`tool-btn ${tool === 'select' ? 'active' : ''}`}
@@ -203,9 +227,15 @@ const Toolbar: React.FC<Props> = ({
             </svg>
           </button>
         </div>
+          </>
+        ) : (
+          <span className="shot-list-toolbar-title">Production planning</span>
+        )}
       </div>
 
       <div className="toolbar-right">
+        {workspace === 'canvas' && (
+          <>
         <div className="tool-group">
           <button className="tool-btn" onClick={onNew} title="New Scene">
             <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
@@ -322,6 +352,8 @@ const Toolbar: React.FC<Props> = ({
         </div>
 
         <div className="toolbar-divider" />
+          </>
+        )}
 
         <div className="ui-scale-control" title="UI Scale">
           <svg width="14" height="14" viewBox="0 0 24 24" {...stroke} opacity="0.55">

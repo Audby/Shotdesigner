@@ -13,6 +13,7 @@ const projectRootPath = getArgValue('--shotdesigner-project-root=') || process.c
 const userDataPath = getArgValue('--shotdesigner-user-data=');
 const workspaceAppDataPath = getArgValue('--shotdesigner-workspace-appdata=');
 const scenesPath = getArgValue('--shotdesigner-scenes-path=') || path.join(projectRootPath, 'scenes');
+const shotListsPath = getArgValue('--shotdesigner-shotlists-path=') || path.join(projectRootPath, 'shotlists');
 
 const normalizeSlashes = (value) => value.replace(/\\/g, '/');
 
@@ -22,8 +23,18 @@ const getScenesDirectoryLabel = () => {
   return normalized.endsWith('/') ? normalized : `${normalized}/`;
 };
 
+const getShotListsDirectoryLabel = () => {
+  const relativePath = path.relative(projectRootPath, shotListsPath) || path.basename(shotListsPath);
+  const normalized = normalizeSlashes(relativePath);
+  return normalized.endsWith('/') ? normalized : `${normalized}/`;
+};
+
 const ensureScenesDirectory = () => {
   fs.mkdirSync(scenesPath, { recursive: true });
+};
+
+const ensureShotListsDirectory = () => {
+  fs.mkdirSync(shotListsPath, { recursive: true });
 };
 
 const tryParseScenes = (value) => {
@@ -51,6 +62,12 @@ const buildSceneFileName = (scene) => {
   const slug = sanitizeSceneName(scene.name);
   const idSuffix = (scene.id || 'scene').slice(0, 8);
   return `${slug}__${idSuffix}.shotdesigner.json`;
+};
+
+const buildShotListFileName = (project) => {
+  const slug = sanitizeSceneName(project.name || 'Untitled Shot List');
+  const idSuffix = (project.id || 'shotlist').slice(0, 8);
+  return `${slug}__${idSuffix}.shotdesigner-shotlist.json`;
 };
 
 const readSceneFile = (filePath) => {
@@ -129,6 +146,61 @@ const saveSceneFile = (scene) => {
   return {
     scene: nextScene,
     relativePath: `${getScenesDirectoryLabel()}${nextFileName}`,
+  };
+};
+
+const readShotListFile = (filePath) => {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(content);
+    if (!parsed || typeof parsed !== 'object' || !parsed.id) return null;
+    return {
+      ...parsed,
+      storageFileName: path.basename(filePath),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const sortShotLists = (projects) => projects.sort((a, b) => {
+  const aTime = Date.parse(a.updatedAt || a.createdAt || 0);
+  const bTime = Date.parse(b.updatedAt || b.createdAt || 0);
+  return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
+});
+
+const listShotListFiles = () => {
+  ensureShotListsDirectory();
+  const projects = fs.readdirSync(shotListsPath)
+    .filter((fileName) => fileName.endsWith('.shotdesigner-shotlist.json'))
+    .map((fileName) => readShotListFile(path.join(shotListsPath, fileName)))
+    .filter(Boolean);
+  return sortShotLists(projects);
+};
+
+const saveShotListFile = (project) => {
+  const cleanProject = { ...project };
+  delete cleanProject.storageFileName;
+  delete cleanProject.storageFilePath;
+
+  if (project.storageFilePath) {
+    fs.writeFileSync(project.storageFilePath, JSON.stringify(cleanProject, null, 2), 'utf8');
+    return {
+      project: { ...cleanProject, storageFilePath: project.storageFilePath },
+      relativePath: project.storageFilePath,
+    };
+  }
+
+  ensureShotListsDirectory();
+  const nextFileName = project.storageFileName?.endsWith('.shotdesigner-shotlist.json')
+    ? path.basename(project.storageFileName)
+    : buildShotListFileName(project);
+  const nextFilePath = path.join(shotListsPath, nextFileName);
+  fs.writeFileSync(nextFilePath, JSON.stringify(cleanProject, null, 2), 'utf8');
+
+  return {
+    project: { ...cleanProject, storageFileName: nextFileName },
+    relativePath: `${getShotListsDirectoryLabel()}${nextFileName}`,
   };
 };
 
@@ -298,6 +370,20 @@ const deleteSceneFile = (storageFileName) => {
   }
 };
 
+const deleteShotListFile = (storageFileName) => {
+  if (typeof storageFileName !== 'string' || !storageFileName.endsWith('.shotdesigner-shotlist.json')) {
+    return false;
+  }
+  const filePath = path.join(shotListsPath, path.basename(storageFileName));
+  if (!fs.existsSync(filePath)) return false;
+  try {
+    fs.unlinkSync(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 contextBridge.exposeInMainWorld('shotDesignerFiles', {
   listScenes: () => {
     migrateLegacyScenesToFiles();
@@ -351,4 +437,44 @@ contextBridge.exposeInMainWorld('shotDesignerFiles', {
     }
   },
   getScenesDirectoryLabel: () => getScenesDirectoryLabel(),
+  listShotLists: () => listShotListFiles(),
+  saveShotList: (project) => saveShotListFile(project),
+  deleteShotList: (storageFileName) => deleteShotListFile(storageFileName),
+  browseShotList: async () => {
+    const filePath = await ipcRenderer.invoke('shotdesigner:browse-shotlist');
+    if (!filePath) return { status: 'canceled' };
+    const project = readShotListFile(filePath);
+    if (!project) return { status: 'error' };
+    const inShotListsDir = path.resolve(path.dirname(filePath)) === path.resolve(shotListsPath);
+    if (!inShotListsDir) {
+      delete project.storageFileName;
+      project.storageFilePath = filePath;
+    }
+    return { status: 'ok', project };
+  },
+  saveShotListAs: async (project) => {
+    const filePath = await ipcRenderer.invoke('shotdesigner:save-shotlist-as', buildShotListFileName(project));
+    if (!filePath) return { status: 'canceled' };
+    try {
+      const cleanProject = { ...project, updatedAt: new Date().toISOString() };
+      delete cleanProject.storageFileName;
+      delete cleanProject.storageFilePath;
+      fs.writeFileSync(filePath, JSON.stringify(cleanProject, null, 2), 'utf8');
+
+      const inShotListsDir = path.resolve(path.dirname(filePath)) === path.resolve(shotListsPath);
+      const savedProject = inShotListsDir
+        ? { ...cleanProject, storageFileName: path.basename(filePath) }
+        : { ...cleanProject, storageFilePath: filePath };
+      return {
+        status: 'ok',
+        project: savedProject,
+        relativePath: inShotListsDir
+          ? `${getShotListsDirectoryLabel()}${path.basename(filePath)}`
+          : filePath,
+      };
+    } catch {
+      return { status: 'error' };
+    }
+  },
+  getShotListsDirectoryLabel: () => getShotListsDirectoryLabel(),
 });

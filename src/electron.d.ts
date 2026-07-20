@@ -1,4 +1,4 @@
-import type { Scene } from './types';
+import type { Scene, ShotListProject } from './types';
 
 interface SceneFileSaveResult {
   scene: Scene;
@@ -15,6 +15,21 @@ type SceneSaveAsResult =
   | { status: 'canceled' }
   | { status: 'error' };
 
+interface ShotListFileSaveResult {
+  project: ShotListProject;
+  relativePath: string;
+}
+
+type ShotListBrowseResult =
+  | { status: 'ok'; project: ShotListProject }
+  | { status: 'canceled' }
+  | { status: 'error' };
+
+type ShotListSaveAsResult =
+  | { status: 'ok'; project: ShotListProject; relativePath: string }
+  | { status: 'canceled' }
+  | { status: 'error' };
+
 declare global {
   interface Window {
     shotDesignerFiles?: {
@@ -24,6 +39,12 @@ declare global {
       browseScene: () => Promise<SceneBrowseResult>;
       saveSceneAs: (scene: Scene) => Promise<SceneSaveAsResult>;
       getScenesDirectoryLabel: () => string;
+      listShotLists: () => ShotListProject[];
+      saveShotList: (project: ShotListProject) => ShotListFileSaveResult;
+      deleteShotList: (storageFileName: string) => boolean;
+      browseShotList: () => Promise<ShotListBrowseResult>;
+      saveShotListAs: (project: ShotListProject) => Promise<ShotListSaveAsResult>;
+      getShotListsDirectoryLabel: () => string;
     };
   }
 }

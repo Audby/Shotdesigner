@@ -6,6 +6,7 @@ const isDev = process.env.NODE_ENV === 'development';
 const projectRootPath = process.cwd();
 const workspaceAppDataPath = path.join(projectRootPath, 'appdata');
 const scenesPath = path.join(projectRootPath, 'scenes');
+const shotListsPath = path.join(projectRootPath, 'shotlists');
 
 // Native "Open Scene" file picker, invoked from the renderer via preload.
 ipcMain.handle('shotdesigner:browse-scene', async (event) => {
@@ -43,6 +44,39 @@ ipcMain.handle('shotdesigner:save-scene-as', async (event, suggestedName) => {
   return filePath;
 });
 
+ipcMain.handle('shotdesigner:browse-shotlist', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Open Shot List',
+    defaultPath: shotListsPath,
+    filters: [
+      { name: 'Shot Designer Shot List', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] },
+    ],
+    properties: ['openFile'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
+
+ipcMain.handle('shotdesigner:save-shotlist-as', async (event, suggestedName) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showSaveDialog(win, {
+    title: 'Save Shot List As',
+    defaultPath: path.join(shotListsPath, suggestedName || 'shot-list.shotdesigner-shotlist.json'),
+    filters: [{ name: 'Shot Designer Shot List', extensions: ['json'] }],
+  });
+  if (result.canceled || !result.filePath) return null;
+
+  let filePath = result.filePath;
+  if (!filePath.endsWith('.shotdesigner-shotlist.json')) {
+    filePath = filePath
+      .replace(/\.shotdesigner-shotlist$/i, '')
+      .replace(/\.json$/i, '') + '.shotdesigner-shotlist.json';
+  }
+  return filePath;
+});
+
 function createWindow() {
   const userDataPath = app.getPath('userData');
   const win = new BrowserWindow({
@@ -63,6 +97,7 @@ function createWindow() {
         `--shotdesigner-user-data=${userDataPath}`,
         `--shotdesigner-workspace-appdata=${workspaceAppDataPath}`,
         `--shotdesigner-scenes-path=${scenesPath}`,
+        `--shotdesigner-shotlists-path=${shotListsPath}`,
       ],
     },
     show: false,

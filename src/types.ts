@@ -68,6 +68,57 @@ export interface Scene {
   updatedAt: string;
 }
 
+export type ShotStatus = 'planned' | 'ready' | 'shot' | 'cut';
+
+export interface Shot {
+  id: string;
+  number: string;
+  description: string;
+  subjects: string;
+  framing: string;
+  angle: string;
+  movement: string;
+  equipment: string;
+  cameraLens: string;
+  setup: string;
+  status: ShotStatus;
+  notes: string;
+  linkedSceneId?: string;
+}
+
+export interface ShotListScene {
+  id: string;
+  number: string;
+  title: string;
+  shots: Shot[];
+}
+
+export interface ShotListGlossaryEntry {
+  id: string;
+  category: string;
+  term: string;
+  description: string;
+}
+
+export interface ShotListSubject {
+  id: string;
+  name: string;
+}
+
+export interface ShotListProject {
+  schemaVersion: 1;
+  id: string;
+  name: string;
+  scenes: ShotListScene[];
+  glossary: ShotListGlossaryEntry[];
+  subjects: ShotListSubject[];
+  storageFileName?: string;
+  /** Absolute path when the shot list lives outside the shotlists folder. */
+  storageFilePath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ElementTemplate {
   type: string;
   category: string;
@@ -88,3 +139,4 @@ export interface CategoryInfo {
 }
 
 export type Tool = 'select' | 'pan' | 'measure';
+export type WorkspaceMode = 'canvas' | 'shotList';
