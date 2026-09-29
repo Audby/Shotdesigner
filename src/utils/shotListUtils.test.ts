@@ -62,3 +62,22 @@ describe('browser shot-list persistence', () => {
     expect(savedProjects[0].scenes[0].shots[0].description).toBe('Updated description');
   });
 });
+
+describe('scene sets', () => {
+  it('stages shots in their scene set unless they link their own, and survives normalization', async () => {
+    const { createShot, createShotListProject, normalizeShotListProject, sceneForSet, shotSetId, shotsInSet } = await import('./shotListUtils');
+    const project = createShotListProject();
+    const scene = project.scenes[0];
+    scene.linkedSceneId = 'workshop';
+    const a = { ...createShot('6A'), previsShotId: 'cam-a' };
+    const b = { ...createShot('6B'), linkedSceneId: 'exterior' };
+    scene.shots.push(a, b);
+    expect(shotSetId(scene, a)).toBe('workshop');
+    expect(shotSetId(scene, b)).toBe('exterior');
+    expect(shotsInSet(scene, 'workshop').map((s) => s.number)).toEqual(['6A']);
+    expect(sceneForSet(project, 'exterior')?.id).toBe(scene.id);
+    const restored = normalizeShotListProject(JSON.parse(JSON.stringify(project)));
+    expect(restored.scenes[0].linkedSceneId).toBe('workshop');
+    expect(restored.scenes[0].shots[0].previsShotId).toBe('cam-a');
+  });
+});

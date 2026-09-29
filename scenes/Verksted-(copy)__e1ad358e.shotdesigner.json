@@ -266,9 +266,9 @@
       "type": "wall",
       "category": "set",
       "label": "Wall",
-      "x": 20,
-      "y": 560,
-      "rotation": 89.99999999999983,
+      "x": 4.999999999990223,
+      "y": 740.9017920000003,
+      "rotation": 90,
       "scaleX": 1,
       "scaleY": 1,
       "color": "#795548",
@@ -276,7 +276,7 @@
       "locked": false,
       "visible": true,
       "iconPath": "M2 6h20v12H2V6z",
-      "width": 53.86512000000281,
+      "width": 420.0000000000001,
       "height": 12.000000000000046,
       "zIndex": 7,
       "showLabel": false,
@@ -303,8 +303,8 @@
       "type": "roller-door",
       "category": "workshop",
       "label": "Roller Door",
-      "x": 19.999999999999964,
-      "y": 711.8035840000009,
+      "x": 20,
+      "y": 1175.9017920000003,
       "rotation": 89.99999999999994,
       "scaleX": 1,
       "scaleY": 1,
@@ -313,7 +313,7 @@
       "locked": false,
       "visible": true,
       "iconPath": "",
-      "width": 232.96959999999842,
+      "width": 465,
       "height": 12.000000000000064,
       "zIndex": 8,
       "showLabel": false,
@@ -679,7 +679,7 @@
       "category": "characters",
       "label": "Konrad",
       "x": 960,
-      "y": 520,
+      "y": 495.90179200000034,
       "rotation": 0,
       "scaleX": 1,
       "scaleY": 1,
@@ -715,8 +715,8 @@
       "type": "led-panel",
       "category": "lighting",
       "label": "LED Panel",
-      "x": 1320,
-      "y": 700,
+      "x": 1399.9999999999905,
+      "y": 865.9017920000003,
       "rotation": -128.4505161177192,
       "scaleX": 1,
       "scaleY": 1,
@@ -782,43 +782,6 @@
       "showCone": false,
       "coneAngle": 0,
       "coneLength": 0,
-      "shadowEnabled": true
-    },
-    {
-      "id": "db4452e5-7db6-410a-85d1-32fca54a5b41",
-      "type": "key-light",
-      "category": "lighting",
-      "label": "Lyssabel",
-      "x": 700,
-      "y": 240,
-      "rotation": 33.9431740963897,
-      "scaleX": 1,
-      "scaleY": 1,
-      "color": "#FFF176",
-      "opacity": 1,
-      "locked": false,
-      "visible": true,
-      "iconPath": "M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2 9.88V15h-4v-3.12C8.78 10.88 8 9.52 8 8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 1.52-.78 2.88-2 3.88z",
-      "width": 43.999999999999865,
-      "height": 43.999999999999915,
-      "zIndex": 21,
-      "showLabel": true,
-      "labelOffsetX": -18.83481258806512,
-      "labelOffsetY": -34.13912371117544,
-      "labelWidth": 120,
-      "labelAutoWidth": true,
-      "labelFontSize": 18,
-      "labelTextColor": "#ffffff",
-      "labelBackgroundColor": "#121212",
-      "labelBackgroundOpacity": 0,
-      "labelPaddingX": 12,
-      "labelPaddingY": 6,
-      "labelCornerRadius": 10,
-      "labelShadowColor": "#000000",
-      "labelShadowOpacity": 0.35,
-      "showCone": true,
-      "coneAngle": 60,
-      "coneLength": 140,
       "shadowEnabled": true
     },
     {
@@ -933,26 +896,26 @@
       "shadowEnabled": true
     },
     {
-      "id": "7d5b6071-a11f-4a8a-bca6-4d942028caf4",
-      "type": "practical-light",
-      "category": "lighting",
-      "label": "Smålys over døra",
-      "x": 380,
-      "y": 260,
-      "rotation": 0,
+      "id": "873c4b03-a615-4af0-82bf-8edd55e8b57d",
+      "type": "torch-standing",
+      "category": "cave",
+      "label": "Standing torch",
+      "x": 739.9999999999902,
+      "y": 265.90179200000034,
+      "rotation": -180,
       "scaleX": 1,
       "scaleY": 1,
-      "color": "#FFE0B2",
+      "color": "#6c5238",
       "opacity": 1,
       "locked": false,
       "visible": true,
-      "iconPath": "M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z",
-      "width": 28,
-      "height": 28,
-      "zIndex": 25,
-      "showLabel": true,
-      "labelOffsetX": -4.79283688132216,
-      "labelOffsetY": 37.00000000000006,
+      "iconPath": "M12 2c-1 0-2 1-2 2v2c-1.5.7-2.5 2-2.5 3.5 0 2.49 2.01 4.5 4.5 4.5s4.5-2.01 4.5-4.5c0-1.5-1-2.8-2.5-3.5V4c0-1-1-2-2-2zm-1 16h2v4h-2v-4z",
+      "width": 20,
+      "height": 25,
+      "zIndex": 27,
+      "showLabel": false,
+      "labelOffsetX": 0,
+      "labelOffsetY": 37,
       "labelWidth": 120,
       "labelAutoWidth": true,
       "labelFontSize": 18,
@@ -966,67 +929,30 @@
       "labelShadowOpacity": 0.35,
       "showCone": true,
       "coneAngle": 360,
-      "coneLength": 50,
+      "coneLength": 70,
       "shadowEnabled": true
     },
     {
-      "id": "c4fc5d25-495e-4acc-9350-e0504334086b",
-      "type": "fill-light",
-      "category": "lighting",
-      "label": "Smålys",
-      "x": 1520,
-      "y": 640,
-      "rotation": -104.70902061975158,
+      "id": "a59b4072-6b38-4648-a979-5aa56907b079",
+      "type": "torch-standing",
+      "category": "cave",
+      "label": "Standing torch copy",
+      "x": 889.9999999999902,
+      "y": 265.90179200000034,
+      "rotation": -180,
       "scaleX": 1,
       "scaleY": 1,
-      "color": "#FFE082",
+      "color": "#6c5238",
       "opacity": 1,
       "locked": false,
       "visible": true,
-      "iconPath": "M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z",
-      "width": 40.00000000000018,
-      "height": 40.00000000000043,
-      "zIndex": 26,
-      "showLabel": true,
-      "labelOffsetX": -41.66346290491674,
-      "labelOffsetY": -5.927318498577961,
-      "labelWidth": 120,
-      "labelAutoWidth": true,
-      "labelFontSize": 18,
-      "labelTextColor": "#ffffff",
-      "labelBackgroundColor": "#121212",
-      "labelBackgroundOpacity": 0,
-      "labelPaddingX": 12,
-      "labelPaddingY": 6,
-      "labelCornerRadius": 10,
-      "labelShadowColor": "#000000",
-      "labelShadowOpacity": 0.35,
-      "showCone": true,
-      "coneAngle": 70,
-      "coneLength": 120,
-      "shadowEnabled": true
-    },
-    {
-      "id": "60313a5f-db95-4f47-b182-70f32790aded",
-      "type": "camera",
-      "category": "cameras",
-      "label": "Camera",
-      "x": 840,
-      "y": 340,
-      "rotation": -5.751602565789481,
-      "scaleX": 1,
-      "scaleY": 1,
-      "color": "#E0E0E0",
-      "opacity": 1,
-      "locked": false,
-      "visible": true,
-      "iconPath": "M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z",
-      "width": 43.999999999999794,
-      "height": 35.99999999999987,
-      "zIndex": 27,
+      "iconPath": "M12 2c-1 0-2 1-2 2v2c-1.5.7-2.5 2-2.5 3.5 0 2.49 2.01 4.5 4.5 4.5s4.5-2.01 4.5-4.5c0-1.5-1-2.8-2.5-3.5V4c0-1-1-2-2-2zm-1 16h2v4h-2v-4z",
+      "width": 20,
+      "height": 25,
+      "zIndex": 28,
       "showLabel": false,
       "labelOffsetX": 0,
-      "labelOffsetY": 45,
+      "labelOffsetY": 37,
       "labelWidth": 120,
       "labelAutoWidth": true,
       "labelFontSize": 18,
@@ -1039,8 +965,119 @@
       "labelShadowColor": "#000000",
       "labelShadowOpacity": 0.35,
       "showCone": true,
-      "coneAngle": 45,
-      "coneLength": 120,
+      "coneAngle": 360,
+      "coneLength": 70,
+      "shadowEnabled": true
+    },
+    {
+      "id": "f55c469c-5a9b-4dee-ab9b-613199cb41d9",
+      "type": "torch-standing",
+      "category": "cave",
+      "label": "Standing torch copy copy",
+      "x": 1019.9999999999902,
+      "y": 265.90179200000034,
+      "rotation": -180,
+      "scaleX": 1,
+      "scaleY": 1,
+      "color": "#6c5238",
+      "opacity": 1,
+      "locked": false,
+      "visible": true,
+      "iconPath": "M12 2c-1 0-2 1-2 2v2c-1.5.7-2.5 2-2.5 3.5 0 2.49 2.01 4.5 4.5 4.5s4.5-2.01 4.5-4.5c0-1.5-1-2.8-2.5-3.5V4c0-1-1-2-2-2zm-1 16h2v4h-2v-4z",
+      "width": 20,
+      "height": 25,
+      "zIndex": 29,
+      "showLabel": false,
+      "labelOffsetX": 0,
+      "labelOffsetY": 37,
+      "labelWidth": 120,
+      "labelAutoWidth": true,
+      "labelFontSize": 18,
+      "labelTextColor": "#ffffff",
+      "labelBackgroundColor": "#121212",
+      "labelBackgroundOpacity": 0,
+      "labelPaddingX": 12,
+      "labelPaddingY": 6,
+      "labelCornerRadius": 10,
+      "labelShadowColor": "#000000",
+      "labelShadowOpacity": 0.35,
+      "showCone": true,
+      "coneAngle": 360,
+      "coneLength": 70,
+      "shadowEnabled": true
+    },
+    {
+      "id": "03b041b0-7d7e-4b11-bd23-5ae2f7968535",
+      "type": "box-crate",
+      "category": "props",
+      "label": "Light tube",
+      "x": 639.9999999999902,
+      "y": -304.09820799999966,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "color": "#e9eef2",
+      "opacity": 1,
+      "locked": false,
+      "visible": true,
+      "iconPath": "M4 4h16v16H4V4zm2 2v12h12V6H6zm5 1v4H7V7h4zm1 0h4v4h-4V7z",
+      "width": 5,
+      "height": 5,
+      "zIndex": 30,
+      "showLabel": false,
+      "labelOffsetX": 0,
+      "labelOffsetY": 39,
+      "labelWidth": 120,
+      "labelAutoWidth": true,
+      "labelFontSize": 18,
+      "labelTextColor": "#ffffff",
+      "labelBackgroundColor": "#121212",
+      "labelBackgroundOpacity": 0,
+      "labelPaddingX": 12,
+      "labelPaddingY": 6,
+      "labelCornerRadius": 10,
+      "labelShadowColor": "#000000",
+      "labelShadowOpacity": 0.35,
+      "showCone": false,
+      "coneAngle": 0,
+      "coneLength": 0,
+      "shadowEnabled": true
+    },
+    {
+      "id": "71114d87-c77b-4990-b786-f9f85b364e35",
+      "type": "box-crate",
+      "category": "props",
+      "label": "SkyPanel",
+      "x": -90.00000000000978,
+      "y": 465.90179200000034,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "color": "#34383b",
+      "opacity": 1,
+      "locked": false,
+      "visible": true,
+      "iconPath": "M4 4h16v16H4V4zm2 2v12h12V6H6zm5 1v4H7V7h4zm1 0h4v4h-4V7z",
+      "width": 110.00000000000001,
+      "height": 60,
+      "zIndex": 31,
+      "showLabel": false,
+      "labelOffsetX": 0,
+      "labelOffsetY": 39,
+      "labelWidth": 120,
+      "labelAutoWidth": true,
+      "labelFontSize": 18,
+      "labelTextColor": "#ffffff",
+      "labelBackgroundColor": "#121212",
+      "labelBackgroundOpacity": 0,
+      "labelPaddingX": 12,
+      "labelPaddingY": 6,
+      "labelCornerRadius": 10,
+      "labelShadowColor": "#000000",
+      "labelShadowOpacity": 0.35,
+      "showCone": false,
+      "coneAngle": 0,
+      "coneLength": 0,
       "shadowEnabled": true
     }
   ],
@@ -1052,6 +1089,959 @@
   "gridStyle": "lines",
   "gridColor": "#ffffff",
   "createdAt": "2026-07-20T11:08:53.819Z",
-  "updatedAt": "2026-07-20T12:11:39.427Z",
-  "storageFileName": "Verksted-(copy)__e1ad358e.shotdesigner.json"
+  "updatedAt": "2026-09-29T14:18:42.583Z",
+  "storageFileName": "Verksted-(copy)__e1ad358e.shotdesigner.json",
+  "previs": {
+    "schemaVersion": 1,
+    "sizing": 2,
+    "wallStyle": "built",
+    "unitsPerMeter": 100,
+    "origin": [
+      819.9999999999902,
+      465.90179200000034
+    ],
+    "floorSize": [
+      23.999999999999805,
+      20
+    ],
+    "floorColor": "#65716d",
+    "backgroundColor": "#26292e",
+    "ambientIntensity": 0.6,
+    "daylightIntensity": 0.35,
+    "objects": [
+      {
+        "id": "fd5bd4ff-b167-43ce-a476-083e5085fe72",
+        "sourceElementId": "d638cab2-33c8-43d1-9924-da4b921223dc",
+        "diagramSize": [
+          1182.5779853070903,
+          12.000000000000021
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          2.141160679424104,
+          0,
+          -2.4590179200000053
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          11.825779853070904,
+          2.8,
+          0.12000000000000022
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "93939409-c945-460a-9994-ba13a766db3b",
+        "sourceElementId": "17b0c3cd-e592-4fd2-9f5a-c6894e342283",
+        "diagramSize": [
+          87.53367272727237,
+          8.000000000000002
+        ],
+        "assetId": "door-closed",
+        "label": "Door (Closed)",
+        "position": [
+          -4.285071999999901,
+          0,
+          -2.459017920000006
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          0.8753367272727237,
+          2.1,
+          0.08000000000000002
+        ],
+        "color": "#8c7460",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "a0f3a6f8-beca-44da-9330-9623b9969a5e",
+        "sourceElementId": "63754563-ab3b-43ad-a321-278b0c3ba071",
+        "diagramSize": [
+          88.11354000000037,
+          12.000000000000007
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          -5.229938879999899,
+          0,
+          -2.4590179200000053
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          0.8811354000000037,
+          2.8,
+          0.12000000000000006
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "2fa5dcf4-6c91-412e-830f-dec1879069d6",
+        "sourceElementId": "7b3e2dc4-83c4-4d12-b59f-73e5e413d57e",
+        "diagramSize": [
+          163.69626000000017,
+          12.000000000000055
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          -5.599999999999902,
+          0,
+          -1.6259712000000048
+        ],
+        "rotation": [
+          0,
+          90.00000000000006,
+          0
+        ],
+        "dimensions": [
+          1.6369626000000017,
+          2.8,
+          0.12000000000000055
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "f6f59f75-56f8-41a0-b572-596bcb9105b6",
+        "sourceElementId": "a9b9ba7f-a461-4483-92f5-466cca6e9684",
+        "diagramSize": [
+          240.56135395682668,
+          12.000000000000137
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          -6.803107839999901,
+          0,
+          -0.8590179200000023
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          2.4056135395682667,
+          2.8,
+          0.12000000000000137
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "cf383fab-da1e-4d9f-9d9e-7f87c96d372c",
+        "sourceElementId": "0becbe35-16f2-4990-b318-247235933be2",
+        "diagramSize": [
+          96.68704000000098,
+          8.000000000000032
+        ],
+        "assetId": "window",
+        "label": "Window",
+        "position": [
+          -7.999999999999902,
+          1,
+          0.1409820799999966
+        ],
+        "rotation": [
+          0,
+          -89.9999999999999,
+          0
+        ],
+        "dimensions": [
+          0.9668704000000098,
+          1.2,
+          0.08000000000000032
+        ],
+        "color": "#839aa4",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "9da16eed-19e6-46d0-9d32-ac645b1feaad",
+        "sourceElementId": "72eda875-edf6-4278-8cd3-2be8709a0946",
+        "diagramSize": [
+          53.86512000000281,
+          12.000000000000046
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          -7.999999999999902,
+          0,
+          -0.6590179200000034
+        ],
+        "rotation": [
+          0,
+          -89.99999999999983,
+          0
+        ],
+        "dimensions": [
+          0.5386512000000281,
+          2.8,
+          0.12000000000000047
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "47d90db4-7259-4d81-880c-ee7468aa4465",
+        "sourceElementId": "4e19cb92-64ec-4b1a-a8e0-4b19b06a83a3",
+        "diagramSize": [
+          420.0000000000001,
+          12.000000000000046
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          -8.15,
+          0,
+          2.75
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ],
+        "dimensions": [
+          4.2,
+          2.8,
+          0.12000000000000045
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "0e899350-f29c-46d0-ad9a-3015b9aea3d0",
+        "sourceElementId": "b7d1ee65-1a69-4cf6-b455-81779467efbf",
+        "diagramSize": [
+          465,
+          12.000000000000064
+        ],
+        "assetId": "hangar-door",
+        "label": "Roller Door",
+        "position": [
+          -7.999999999999902,
+          0,
+          7.1
+        ],
+        "rotation": [
+          0,
+          -89.99999999999994,
+          0
+        ],
+        "dimensions": [
+          4.65,
+          2.9000000000000004,
+          0.12000000000000063
+        ],
+        "color": "#8a979c",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "fad665b3-2ef2-41fc-a2f2-7e98074e309a",
+        "sourceElementId": "cde1caa4-3b6d-42b2-9b9f-cbc7978d6a8f",
+        "diagramSize": [
+          276.9888527472541,
+          404.87710638297784
+        ],
+        "assetId": "car",
+        "label": "Car",
+        "position": [
+          0.4000000000000978,
+          0,
+          1.9409820799999966
+        ],
+        "rotation": [
+          0,
+          90.00000000000018,
+          0
+        ],
+        "dimensions": [
+          2.769888527472541,
+          1.45,
+          4.048771063829778
+        ],
+        "color": "#83939a",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "4f379d55-0b41-4fc5-9142-53a4b177ee08",
+        "sourceElementId": "2c3f86fd-cbc0-4229-9286-e377772b4a85",
+        "diagramSize": [
+          543.8302032761623,
+          62.60574870588238
+        ],
+        "assetId": "workbench",
+        "label": "Workbench",
+        "position": [
+          0.7698124800001108,
+          0,
+          -2.0196726400000204
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          5.438302032761623,
+          0.9,
+          0.6260574870588238
+        ],
+        "color": "#9b8569",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "86554f52-0741-4286-a876-4206c4a61f75",
+        "sourceElementId": "581a8dbd-2c65-4834-a34a-3e253310b5c2",
+        "diagramSize": [
+          146.4790846681894,
+          126.23639169139467
+        ],
+        "assetId": "scrap-metal",
+        "label": "Junk Pile",
+        "position": [
+          5.8000000000000975,
+          0,
+          0.9409820799999966
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.464790846681894,
+          0.5,
+          1.2623639169139467
+        ],
+        "color": "#7d7468",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "0cd93289-16a6-42d1-8ad5-27360192021b",
+        "sourceElementId": "f45714da-20cd-4ab4-accf-1d406b9bae1c",
+        "diagramSize": [
+          48,
+          32
+        ],
+        "assetId": "scrap-metal",
+        "label": "Scrap Metal",
+        "position": [
+          6.200000000000098,
+          0,
+          -0.059017920000003415
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.4,
+          0.5,
+          0.9
+        ],
+        "color": "#7d7468",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "01d9cc8b-abf4-4972-88c3-ad65e90da4e9",
+        "sourceElementId": "37d7e86c-f734-468d-b68f-13d38cb9aee3",
+        "diagramSize": [
+          48,
+          32
+        ],
+        "assetId": "scrap-metal",
+        "label": "Scrap Metal",
+        "position": [
+          5.600000000000097,
+          0,
+          0.1409820799999966
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.4,
+          0.5,
+          0.9
+        ],
+        "color": "#7d7468",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "a94ee431-1bb3-43e3-bfe5-5de1e0dfe83d",
+        "sourceElementId": "6449536f-3ab9-45ec-84a2-484ae2167f18",
+        "diagramSize": [
+          48,
+          32
+        ],
+        "assetId": "scrap-metal",
+        "label": "Scrap Metal",
+        "position": [
+          6.400000000000098,
+          0,
+          0.3409820799999966
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.4,
+          0.5,
+          0.9
+        ],
+        "color": "#7d7468",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "2e9403be-8875-4e6f-92bd-c6c3c69cfcd1",
+        "sourceElementId": "05c6dcc0-862e-4acd-ba4f-dacd2da4a79f",
+        "diagramSize": [
+          125.60994091804645,
+          101.43272532774635
+        ],
+        "assetId": "spare-engine",
+        "label": "Engine Block",
+        "position": [
+          5.400000000000098,
+          0,
+          -1.8590179200000034
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.2560994091804645,
+          0.65,
+          1.0143272532774636
+        ],
+        "color": "#6b7074",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "b367368c-017d-47c1-8619-ed69f4daa06d",
+        "sourceElementId": "c47a4e09-b3f4-4e7d-b1f0-f01d5cc3a515",
+        "diagramSize": [
+          40,
+          40
+        ],
+        "assetId": "actor-male",
+        "label": "Vito",
+        "position": [
+          1.8000000000000977,
+          0,
+          -1.4590179200000035
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          0.55,
+          1.78,
+          0.4
+        ],
+        "color": "#729fc1",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "52c74a38-43fe-4eae-a824-5a2fbf4a8a4b",
+        "sourceElementId": "5bc279f7-5f33-437e-bc73-dada17ed2052",
+        "diagramSize": [
+          40,
+          40
+        ],
+        "assetId": "actor-male",
+        "label": "Konrad",
+        "position": [
+          1.4000000000000978,
+          0,
+          0.3
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          0.55,
+          1.78,
+          0.4
+        ],
+        "color": "#131a20",
+        "visible": true,
+        "locked": false,
+        "pose": "standing"
+      },
+      {
+        "id": "e51d3abd-b258-4da3-82d0-57bfa717442d",
+        "sourceElementId": "62a14dba-97a3-4463-9cea-a33ccfef1ab8",
+        "diagramSize": [
+          55.658349640099836,
+          44.806029485797765
+        ],
+        "assetId": "led-panel",
+        "label": "LED Panel",
+        "position": [
+          5.8000000000000025,
+          0,
+          4
+        ],
+        "rotation": [
+          0,
+          128.4505161177192,
+          0
+        ],
+        "dimensions": [
+          0.6,
+          2,
+          0.4
+        ],
+        "color": "#d9e2e6",
+        "visible": true,
+        "locked": false,
+        "lightIntensity": 288,
+        "lightAngle": 90,
+        "lightColor": "#ffefe1",
+        "lightKelvin": 5600
+      },
+      {
+        "id": "66874385-74bd-4336-8467-d01acb13175c",
+        "sourceElementId": "3c779762-fbad-4343-a7d8-1333174f10ab",
+        "diagramSize": [
+          603.9605325064938,
+          11.999999999999945
+        ],
+        "assetId": "wall",
+        "label": "Wall",
+        "position": [
+          7.999999999999902,
+          0,
+          0.6498842198835189
+        ],
+        "rotation": [
+          0,
+          90.00000000000006,
+          0
+        ],
+        "dimensions": [
+          6.0396053250649375,
+          2.8,
+          0.11999999999999945
+        ],
+        "color": "#bcb7ab",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "aa31ac0b-dc54-4fd8-9bfa-e0cdde0ae872",
+        "sourceElementId": "fec31b15-29a1-4ae7-9cc0-26b569d93880",
+        "diagramSize": [
+          39.99999999999988,
+          39.99999999999997
+        ],
+        "assetId": "actor-male",
+        "label": "Karlos",
+        "position": [
+          5.000000000000098,
+          0,
+          -1.0590179200000034
+        ],
+        "rotation": [
+          0,
+          -13.05445321270772,
+          0
+        ],
+        "dimensions": [
+          0.55,
+          1.78,
+          0.4
+        ],
+        "color": "#91508b",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "fa780a6e-8dfa-4ed1-85f0-6680d390ebef",
+        "sourceElementId": "bbf3d618-7e08-4880-b847-6fd39e5ceda8",
+        "diagramSize": [
+          134.18818770738204,
+          77.37700904738215
+        ],
+        "assetId": "table-rect",
+        "label": "Table (Rect)",
+        "position": [
+          -6.799999999999902,
+          0,
+          0.1409820799999966
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.3418818770738203,
+          0.76,
+          0.7737700904738215
+        ],
+        "color": "#9d7957",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "11086244-6b5d-4ad3-aa9e-e942f07f8aae",
+        "sourceElementId": "faf88b36-efcb-4642-8571-8a0ab755dda9",
+        "diagramSize": [
+          145.7499953167092,
+          76.62008185616901
+        ],
+        "assetId": "tool-cabinet",
+        "label": "Tool Cabinet",
+        "position": [
+          -2.799999999999902,
+          0,
+          -1.8590179200000034
+        ],
+        "rotation": [
+          0,
+          180,
+          0
+        ],
+        "dimensions": [
+          1.457499953167092,
+          2.5,
+          0.7662008185616901
+        ],
+        "color": "#925953",
+        "visible": true,
+        "locked": false
+      },
+      {
+        "id": "1bf0d47e-f5c3-4646-8321-0b62e15a8d7e",
+        "sourceElementId": "873c4b03-a615-4af0-82bf-8edd55e8b57d",
+        "diagramSize": [
+          20,
+          25
+        ],
+        "assetId": "torch-standing",
+        "label": "Standing torch",
+        "position": [
+          -0.8,
+          2.1,
+          -2
+        ],
+        "rotation": [
+          0,
+          180,
+          180
+        ],
+        "dimensions": [
+          0.2,
+          0.45,
+          0.25
+        ],
+        "color": "#6c5238",
+        "visible": true,
+        "locked": false,
+        "lightIntensity": 3,
+        "lightAngle": 60,
+        "lightColor": "#ff9a4a"
+      },
+      {
+        "id": "ef0fba29-a993-4c78-a8ff-f2f1a4059986",
+        "sourceElementId": "a59b4072-6b38-4648-a979-5aa56907b079",
+        "diagramSize": [
+          20,
+          25
+        ],
+        "assetId": "torch-standing",
+        "label": "Standing torch copy",
+        "position": [
+          0.7,
+          2.1,
+          -2
+        ],
+        "rotation": [
+          0,
+          180,
+          180
+        ],
+        "dimensions": [
+          0.2,
+          0.45,
+          0.25
+        ],
+        "color": "#6c5238",
+        "visible": true,
+        "locked": false,
+        "lightIntensity": 3,
+        "lightAngle": 60,
+        "lightColor": "#ff9a4a"
+      },
+      {
+        "id": "cb4280fe-e341-4764-96f9-20da6f54f5bf",
+        "sourceElementId": "f55c469c-5a9b-4dee-ab9b-613199cb41d9",
+        "diagramSize": [
+          20,
+          25
+        ],
+        "assetId": "torch-standing",
+        "label": "Standing torch copy copy",
+        "position": [
+          2,
+          2.1,
+          -2
+        ],
+        "rotation": [
+          0,
+          180,
+          180
+        ],
+        "dimensions": [
+          0.2,
+          0.45,
+          0.25
+        ],
+        "color": "#6c5238",
+        "visible": true,
+        "locked": false,
+        "lightIntensity": 3,
+        "lightAngle": 60,
+        "lightColor": "#ff9a4a"
+      },
+      {
+        "id": "ee888276-4a16-4044-ba56-0107d34c2ba0",
+        "sourceElementId": "03b041b0-7d7e-4b11-bd23-5ae2f7968535",
+        "diagramSize": [
+          5,
+          5
+        ],
+        "assetId": "light-tube",
+        "label": "Light tube",
+        "position": [
+          -1.8,
+          0,
+          -7.7
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          0.05,
+          0.45,
+          0.05
+        ],
+        "color": "#e9eef2",
+        "visible": true,
+        "locked": false,
+        "lightIntensity": 320,
+        "lightAngle": 60,
+        "lightColor": "#ffb87b",
+        "lightKelvin": 3200
+      },
+      {
+        "id": "4eaa1183-6642-4c96-a3c2-44db153a03e0",
+        "sourceElementId": "71114d87-c77b-4990-b786-f9f85b364e35",
+        "diagramSize": [
+          110.00000000000001,
+          60
+        ],
+        "assetId": "skypanel",
+        "label": "SkyPanel",
+        "position": [
+          -9.1,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "dimensions": [
+          1.1,
+          2.1,
+          0.6
+        ],
+        "color": "#34383b",
+        "visible": true,
+        "locked": false,
+        "lightIntensity": 352.5,
+        "lightAngle": 60,
+        "lightColor": "#ffefe1",
+        "lightKelvin": 5600
+      }
+    ],
+    "shots": [
+      {
+        "id": "01be2e46-e74a-4795-813a-2bd2fc5d01bd",
+        "name": "1A · Test",
+        "sensorWidth": 36,
+        "aspectRatio": 1.7777777777777777,
+        "duration": 4,
+        "path": "linear",
+        "ease": true,
+        "keyframes": [
+          {
+            "id": "7f750782-e317-498c-adba-de3a48dc9f7a",
+            "time": 0,
+            "position": [
+              -3.044553310734516,
+              1.784822320657868,
+              -0.10195756063414076
+            ],
+            "target": [
+              4.2667919389552225,
+              1.0207199771978368,
+              0.5626270106618566
+            ],
+            "lens": 35
+          },
+          {
+            "id": "6fa8bbe3-a79c-45d0-8033-61a4f3586986",
+            "time": 3,
+            "position": [
+              -1.2733194996866137,
+              1.711895198109088,
+              -1.270732690040937
+            ],
+            "target": [
+              4.975931757849479,
+              1.1779479575211353,
+              -1.7432774332489553
+            ],
+            "lens": 35
+          },
+          {
+            "id": "b2bc5eaf-f308-490b-aa7a-44fb7859d642",
+            "time": 4,
+            "position": [
+              0.505893284354989,
+              1.6921996292934218,
+              0.5191150669769872
+            ],
+            "target": [
+              3.5667905447930695,
+              1.386204491094961,
+              -4.682536469728367
+            ],
+            "lens": 35
+          }
+        ],
+        "dof": {
+          "fStop": 2.8,
+          "enabled": false,
+          "focusDistance": 2.45
+        },
+        "blocking": {
+          "52c74a38-43fe-4eae-a824-5a2fbf4a8a4b": [
+            {
+              "id": "37e095e8-8c04-4868-9549-9c4f65e4f0eb",
+              "time": 0,
+              "position": [
+                1.4000000000000978,
+                0,
+                0.3
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "id": "a0502d81-67e9-4c2b-b74d-b9a5e52c30d8",
+              "time": 3,
+              "position": [
+                1.4000000000000978,
+                0,
+                -1.21875
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            },
+            {
+              "id": "28407d52-637b-493d-adc3-6037076a76ac",
+              "time": 4,
+              "position": [
+                1.4000000000000001,
+                0,
+                -1.5
+              ],
+              "rotation": [
+                0,
+                310,
+                0
+              ]
+            }
+          ],
+          "ee888276-4a16-4044-ba56-0107d34c2ba0": [
+            {
+              "id": "80a23c4d-fabb-4949-ad8a-af4431e74e3b",
+              "time": 4,
+              "position": [
+                -1.7000000000000002,
+                1.1,
+                -2
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "sunAzimuth": 225,
+    "sunElevation": 50
+  }
 }

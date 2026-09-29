@@ -1,47 +1,64 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
+/** Pure state updates remain safe when React StrictMode evaluates an updater twice. */
 export function useHistory<T>(initialState: T) {
-  const [state, setState] = useState<T>(initialState);
-  const pastRef = useRef<T[]>([]);
-  const futureRef = useRef<T[]>([]);
-
-  const set = useCallback((newState: T | ((prev: T) => T)) => {
-    setState((prev) => {
-      const resolved = typeof newState === 'function' ? (newState as (p: T) => T)(prev) : newState;
-      pastRef.current = [...pastRef.current.slice(-49), prev];
-      futureRef.current = [];
-      return resolved;
+  const [history, setHistory] = useState<{ state: T; past: T[]; future: T[] }>({
+    state: initialState,
+    past: [],
+    future: [],
+  });
+  const set = useCallback((next: T | ((prev: T) => T)) => {
+    setHistory((prev) => {
+      const resolved =
+        typeof next === 'function' ? (next as (p: T) => T)(prev.state) : next;
+      if (resolved === prev.state) return prev;
+      return {
+        state: resolved,
+        past: [...prev.past.slice(-49), prev.state],
+        future: [],
+      };
     });
   }, []);
-
-  const undo = useCallback(() => {
-    setState((prev) => {
-      if (pastRef.current.length === 0) return prev;
-      const previous = pastRef.current[pastRef.current.length - 1];
-      pastRef.current = pastRef.current.slice(0, -1);
-      futureRef.current = [prev, ...futureRef.current];
-      return previous;
-    });
-  }, []);
-
-  const redo = useCallback(() => {
-    setState((prev) => {
-      if (futureRef.current.length === 0) return prev;
-      const next = futureRef.current[0];
-      futureRef.current = futureRef.current.slice(1);
-      pastRef.current = [...pastRef.current, prev];
-      return next;
-    });
-  }, []);
-
-  const canUndo = pastRef.current.length > 0;
-  const canRedo = futureRef.current.length > 0;
-
-  const reset = useCallback((newState: T) => {
-    pastRef.current = [];
-    futureRef.current = [];
-    setState(newState);
-  }, []);
-
-  return { state, set, undo, redo, canUndo, canRedo, reset };
+  // Saving can update storage metadata without creating a meaningless undo step.
+  const replace = useCallback((state: T) => setHistory(prev => ({ ...prev, state })), []);
+  const undo = useCallback(
+    () =>
+      setHistory((prev) =>
+        prev.past.length
+          ? {
+              state: prev.past[prev.past.length - 1],
+              past: prev.past.slice(0, -1),
+              future: [prev.state, ...prev.future],
+            }
+          : prev,
+      ),
+    [],
+  );
+  const redo = useCallback(
+    () =>
+      setHistory((prev) =>
+        prev.future.length
+          ? {
+              state: prev.future[0],
+              past: [...prev.past, prev.state],
+              future: prev.future.slice(1),
+            }
+          : prev,
+      ),
+    [],
+  );
+  const reset = useCallback(
+    (state: T) => setHistory({ state, past: [], future: [] }),
+    [],
+  );
+  return {
+    state: history.state,
+    set,
+    replace,
+    undo,
+    redo,
+    reset,
+    canUndo: history.past.length > 0,
+    canRedo: history.future.length > 0,
+  };
 }

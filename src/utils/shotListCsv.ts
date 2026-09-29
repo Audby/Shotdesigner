@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Shot, ShotListGlossaryEntry, ShotListProject, ShotListScene } from '../types';
 import { createShot, normalizeShotListProject } from './shotListUtils';
 
-const COLUMN_ALIASES: Record<keyof Omit<Shot, 'id' | 'status' | 'notes' | 'linkedSceneId'>, string[]> = {
+const COLUMN_ALIASES: Record<keyof Omit<Shot, 'id' | 'status' | 'notes' | 'linkedSceneId' | 'previsShotId'>, string[]> = {
   number: ['shot', 'shot number', 'shotnr', 'shot nr'],
   description: ['beskrivelse', 'description'],
   subjects: ['subjekter', 'subjects', 'subject'],

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useWorkspacePanels } from '../hooks/useWorkspacePanels';
 import type {
   Scene,
   Shot,
@@ -13,6 +14,8 @@ import {
   createShotListScene,
   deleteShotListProject,
   getSavedShotLists,
+  nextShotNumber,
+  shotSetId,
 } from '../utils/shotListUtils';
 
 interface Props {
@@ -34,8 +37,9 @@ interface Props {
   onImportCsv: () => void;
   onExportCsv: () => void;
   onExportJson: () => void;
-  onCreateCanvas: (sceneId: string, shotId: string) => void;
-  onOpenCanvas: (sceneId: string, shotId: string) => void;
+  /** Open a scene (shotId null) or a shot in its set, creating the set on first use. */
+  onOpenShot: (sceneId: string, shotId: string | null, target: 'canvas' | 'previs') => void;
+  onLinkSceneSet: (sceneId: string, setId?: string) => void;
   onLinkCanvas: (sceneId: string, shotId: string, linkedSceneId?: string) => void;
 }
 
@@ -86,7 +90,7 @@ const COLUMN_DEFINITIONS: Array<{ key: ShotColumnKey; label: string }> = [
   { key: 'movement', label: 'Movement' },
   { key: 'setup', label: 'Setup' },
   { key: 'status', label: 'Status' },
-  { key: 'canvas', label: 'Canvas' },
+  { key: 'canvas', label: 'Visualize' },
 ];
 
 const wrappedRowCount = (value: string, width: number): number => {
@@ -150,12 +154,6 @@ const SubjectPicker: React.FC<SubjectPickerProps> = ({ value, subjects, onChange
   );
 };
 
-const nextShotNumber = (scene: ShotListScene): string => {
-  const index = scene.shots.length;
-  const suffix = index < 26 ? String.fromCharCode(65 + index) : String(index + 1);
-  return `${scene.number}${suffix}`;
-};
-
 const moveItem = <T,>(items: T[], from: number, to: number): T[] => {
   if (to < 0 || to >= items.length || from === to) return items;
   const next = [...items];
@@ -183,15 +181,17 @@ const ShotListWorkspace: React.FC<Props> = ({
   onImportCsv,
   onExportCsv,
   onExportJson,
-  onCreateCanvas,
-  onOpenCanvas,
+  onOpenShot,
+  onLinkSceneSet,
   onLinkCanvas,
 }) => {
+  const panels = useWorkspacePanels(1000, true, false);
+  const { leftOpen: scenesOpen, rightOpen: detailsOpen } = panels;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ShotStatus>('all');
   const [showGlossary, setShowGlossary] = useState(false);
   const [showSubjects, setShowSubjects] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
+  const shotRows = useRef(new Map<string, HTMLTableRowElement>());
   const [newSubjectName, setNewSubjectName] = useState('');
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [savedProjects, setSavedProjects] = useState<ShotListProject[]>([]);
@@ -363,6 +363,8 @@ const ShotListWorkspace: React.FC<Props> = ({
 
   const addShot = () => {
     if (!activeScene) return;
+    setSearch('');
+    setStatusFilter('all');
     const shot = createShot(nextShotNumber(activeScene));
     updateScene(activeScene.id, { shots: [...activeScene.shots, shot] });
     onSelectShot(shot.id);
@@ -379,7 +381,7 @@ const ShotListWorkspace: React.FC<Props> = ({
   };
 
   const deleteShot = (shot: Shot) => {
-    if (!activeScene || !window.confirm(`Delete shot "${shot.number}"?`)) return;
+    if (!activeScene) return;
     updateScene(activeScene.id, { shots: activeScene.shots.filter((item) => item.id !== shot.id) });
     if (selectedShotId === shot.id) onSelectShot(null);
   };
@@ -421,7 +423,11 @@ const ShotListWorkspace: React.FC<Props> = ({
         || target instanceof HTMLTextAreaElement
         || target instanceof HTMLSelectElement
         || Boolean(target?.isContentEditable);
-      if (isEditing) return;
+      if (event.defaultPrevented || document.querySelector('dialog[open]')) return;
+      if (isEditing) {
+        if (event.key === 'Escape') { event.preventDefault(); target?.closest('tr')?.focus(); }
+        return;
+      }
 
       const modifier = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
@@ -429,11 +435,6 @@ const ShotListWorkspace: React.FC<Props> = ({
       if (key === '/' && !modifier) {
         event.preventDefault();
         searchRef.current?.focus();
-        return;
-      }
-      if (event.key === '?') {
-        event.preventDefault();
-        setShowShortcuts((visible) => !visible);
         return;
       }
       if (key === 'n' && !modifier) {
@@ -474,7 +475,6 @@ const ShotListWorkspace: React.FC<Props> = ({
       }
       if ((event.key === 'Delete' || event.key === 'Backspace') && selectedShot && activeScene) {
         event.preventDefault();
-        if (!window.confirm(`Delete shot "${selectedShot.number}"?`)) return;
         onProjectChange({
           ...project,
           scenes: project.scenes.map((scene) => scene.id === activeScene.id
@@ -487,9 +487,10 @@ const ShotListWorkspace: React.FC<Props> = ({
       if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && activeScene.shots.length > 0) {
         event.preventDefault();
         const direction = event.key === 'ArrowUp' ? -1 : 1;
+        const navigationShots = event.altKey ? activeScene.shots : filteredShots;
         const currentIndex = selectedShot
-          ? activeScene.shots.findIndex((shot) => shot.id === selectedShot.id)
-          : direction > 0 ? -1 : activeScene.shots.length;
+          ? navigationShots.findIndex((shot) => shot.id === selectedShot.id)
+          : direction > 0 ? -1 : navigationShots.length;
         if (event.altKey && selectedShot) {
           onProjectChange({
             ...project,
@@ -498,22 +499,17 @@ const ShotListWorkspace: React.FC<Props> = ({
               : scene),
           });
         } else {
-          const nextIndex = Math.max(0, Math.min(activeScene.shots.length - 1, currentIndex + direction));
-          onSelectShot(activeScene.shots[nextIndex].id);
+          const nextIndex = Math.max(0, Math.min(navigationShots.length - 1, currentIndex + direction));
+          if (navigationShots[nextIndex]) { onSelectShot(navigationShots[nextIndex].id); shotRows.current.get(navigationShots[nextIndex].id)?.focus(); }
         }
         return;
       }
-      if (key === 'c' && !modifier && selectedShot && activeScene) {
+      if ((key === 'c' || key === 'v') && !modifier && selectedShot && activeScene) {
         event.preventDefault();
-        if (selectedShot.linkedSceneId && savedSceneById.has(selectedShot.linkedSceneId)) {
-          onOpenCanvas(activeScene.id, selectedShot.id);
-        } else {
-          onCreateCanvas(activeScene.id, selectedShot.id);
-        }
+        onOpenShot(activeScene.id, selectedShot.id, key === 'c' ? 'canvas' : 'previs');
         return;
       }
       if (event.key === 'Escape') {
-        setShowShortcuts(false);
         setShowGlossary(false);
         setShowSubjects(false);
         onSelectShot(null);
@@ -524,14 +520,14 @@ const ShotListWorkspace: React.FC<Props> = ({
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [
     activeScene,
-    onCreateCanvas,
-    onOpenCanvas,
+    onOpenShot,
     onProjectChange,
     onSelectScene,
     onSelectShot,
     project,
     savedSceneById,
     selectedShot,
+    filteredShots,
   ]);
 
   const startPanelResize = (side: 'scenes' | 'inspector') => (event: React.MouseEvent) => {
@@ -589,7 +585,7 @@ const ShotListWorkspace: React.FC<Props> = ({
   if (!activeScene) return null;
 
   return (
-    <div className="shot-list-workspace">
+    <div className={`shot-list-workspace ${scenesOpen ? '' : 'shot-scenes-closed'} ${detailsOpen ? '' : 'shot-inspector-closed'}`}>
       <div className="shot-list-actionbar">
         <div className="shot-list-title-wrap">
           <input
@@ -601,12 +597,20 @@ const ShotListWorkspace: React.FC<Props> = ({
           {isDirty && <span className="dirty-dot" title="Unsaved changes" />}
         </div>
         <div className="shot-list-actions">
-          <button className="shot-action-btn" onClick={onNew}>New</button>
+          <button className="shot-panel-toggle" aria-pressed={scenesOpen} onClick={() => panels.toggleLeft()}>Scenes</button>
+          <button className="shot-panel-toggle" aria-pressed={detailsOpen} onClick={() => panels.toggleRight()}>Details</button>
           <div className="shot-project-menu-wrap" ref={menuRef}>
-            <button className="shot-action-btn" onClick={toggleProjectMenu}>Open</button>
+            <button className="shot-action-btn" aria-expanded={showProjectMenu} onClick={toggleProjectMenu}>File ⌄</button>
             {showProjectMenu && (
               <div className="shot-project-menu">
-                <div className="dropdown-note">Saved in {storageLabel}</div>
+                <span className="menu-eyebrow">SHOT LIST FILE</span>
+                <button className="shot-file-action" onClick={() => { onNew(); setShowProjectMenu(false); }}>New shot list</button>
+                <button className="shot-file-action" onClick={() => { onSaveAs(); setShowProjectMenu(false); }}>Save as…</button>
+                <button className="shot-file-action" onClick={() => { onImportCsv(); setShowProjectMenu(false); }}>Import CSV…</button>
+                <button className="shot-file-action" onClick={() => { onExportCsv(); setShowProjectMenu(false); }}>Export CSV</button>
+                <button className="shot-file-action" onClick={() => { onExportJson(); setShowProjectMenu(false); }}>Export JSON</button>
+                <div className="menu-rule" />
+                <div className="dropdown-note">Recent lists · {storageLabel}</div>
                 {savedProjects.map((savedProject) => (
                   <div
                     key={savedProject.id}
@@ -649,11 +653,8 @@ const ShotListWorkspace: React.FC<Props> = ({
             )}
           </div>
           <button className={`shot-action-btn primary ${isDirty ? 'needs-save' : ''}`} onClick={onSave}>Save</button>
-          <button className="shot-action-btn" onClick={onSaveAs}>Save As</button>
-          <span className="shot-action-divider" />
-          <button className="shot-action-btn" onClick={onImportCsv}>Import CSV</button>
-          <button className="shot-action-btn" onClick={onExportCsv}>Export CSV</button>
-          <button className="shot-action-btn" onClick={onExportJson}>Export JSON</button>
+          <details className="shot-tools-menu" onClick={e => { if ((e.target as HTMLElement).closest('button')) e.currentTarget.open = false; }}>
+            <summary className="shot-action-btn">Project tools ⌄</summary><div>
           <button
             className={`shot-action-btn ${showSubjects ? 'active' : ''}`}
             onClick={() => setShowSubjects((show) => !show)}
@@ -667,29 +668,9 @@ const ShotListWorkspace: React.FC<Props> = ({
           >
             Glossary ({project.glossary.length})
           </button>
-          <button
-            className={`shot-action-btn ${showShortcuts ? 'active' : ''}`}
-            onClick={() => setShowShortcuts((visible) => !visible)}
-            title="Keyboard shortcuts (?)"
-          >
-            Shortcuts
-          </button>
+          </div></details>
         </div>
       </div>
-
-      {showShortcuts && (
-        <div className="shot-shortcuts-bar">
-          <span><kbd>N</kbd> New shot</span>
-          <span><kbd>Shift</kbd> + <kbd>N</kbd> New scene</span>
-          <span><kbd>↑</kbd><kbd>↓</kbd> Select shot</span>
-          <span><kbd>Alt</kbd> + <kbd>↑</kbd><kbd>↓</kbd> Move shot</span>
-          <span><kbd>⌘/Ctrl</kbd> + <kbd>D</kbd> Duplicate</span>
-          <span><kbd>C</kbd> Open/create canvas</span>
-          <span><kbd>/</kbd> Search</span>
-          <span><kbd>Delete</kbd> Delete shot</span>
-          <span><kbd>⌘/Ctrl</kbd> + <kbd>S</kbd> Save</span>
-        </div>
-      )}
 
       {showSubjects && (
         <div className="shot-subject-library">
@@ -844,6 +825,24 @@ const ShotListWorkspace: React.FC<Props> = ({
             <div>
               <span className="shot-eyebrow">Scene {activeScene.number}</span>
               <h2>{activeScene.title}</h2>
+              <p className="shot-scene-summary">{activeScene.shots.length} {activeScene.shots.length === 1 ? 'shot' : 'shots'} <span>·</span> {activeScene.shots.filter(s => s.status === 'ready').length} ready <span>·</span> {activeScene.shots.filter(s => s.status === 'shot').length} filmed</p>
+              <div className="shot-set-bar">
+                <span className="shot-eyebrow">Set</span>
+                {activeScene.linkedSceneId && savedSceneById.has(activeScene.linkedSceneId)
+                  ? <strong title="Every shot in this scene is staged here unless it has its own set">{savedSceneById.get(activeScene.linkedSceneId)?.name}</strong>
+                  : <em>{activeScene.linkedSceneId ? 'Set is missing' : 'No set yet'}</em>}
+                <button className="shot-link-btn linked" onClick={() => onOpenShot(activeScene.id, null, 'canvas')} title="Open the scene's 2D plan (created on first use)">
+                  {activeScene.linkedSceneId && savedSceneById.has(activeScene.linkedSceneId) ? '2D plan' : 'Create set'}
+                </button>
+                {activeScene.linkedSceneId && savedSceneById.has(activeScene.linkedSceneId) && (
+                  <button className="shot-link-btn linked" onClick={() => onOpenShot(activeScene.id, null, 'previs')}>3D studio</button>
+                )}
+                <select value="" aria-label="Choose the set for this scene" onChange={(event) => onLinkSceneSet(activeScene.id, event.target.value === '__none' ? undefined : event.target.value)}>
+                  <option value="">{activeScene.linkedSceneId ? 'Change set…' : 'Use an existing plan…'}</option>
+                  {activeScene.linkedSceneId && <option value="__none">No set</option>}
+                  {savedScenes.map((scene) => <option key={scene.id} value={scene.id}>{scene.name}</option>)}
+                </select>
+              </div>
             </div>
             <div className="shot-table-tools">
               <input
@@ -854,6 +853,7 @@ const ShotListWorkspace: React.FC<Props> = ({
                 placeholder="Search shots…"
               />
               <select
+                aria-label="Filter by shot status"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as 'all' | ShotStatus)}
               >
@@ -897,16 +897,25 @@ const ShotListWorkspace: React.FC<Props> = ({
               </thead>
               <tbody>
                 {filteredShots.map((shot) => {
-                  const linkedScene = shot.linkedSceneId ? savedSceneById.get(shot.linkedSceneId) : undefined;
-                  const hasBrokenLink = Boolean(shot.linkedSceneId && !linkedScene);
+                  const setId = shotSetId(activeScene, shot);
+                  const linkedScene = setId ? savedSceneById.get(setId) : undefined;
+                  const hasBrokenLink = Boolean(setId && !linkedScene);
                   return (
                     <tr
                       key={shot.id}
+                      ref={node => { if (node) shotRows.current.set(shot.id, node); else shotRows.current.delete(shot.id); }}
                       className={shot.id === selectedShotId ? 'selected' : ''}
-                      onClick={() => onSelectShot(shot.id)}
+                      tabIndex={0}
+                      aria-selected={shot.id === selectedShotId}
+                      onClick={event => { onSelectShot(shot.id); if (!(event.target as HTMLElement).closest('input, textarea, select, button')) event.currentTarget.focus(); }}
+                      onFocus={() => onSelectShot(shot.id)}
                     >
                       <td>
+                        <button className="shot-row-selector" aria-label={`Select shot ${shot.number}`} aria-pressed={shot.id === selectedShotId}
+                          title="Select row · Delete to remove · ⌘/Ctrl+Z to undo"
+                          onClick={event => { onSelectShot(shot.id); event.currentTarget.closest('tr')?.focus(); }}>{shot.id === selectedShotId ? '●' : '○'}</button>
                         <input
+                          aria-label={`Shot ${shot.number} number`}
                           value={shot.number}
                           onChange={(event) => updateShot(activeScene.id, shot.id, { number: event.target.value })}
                           onClick={(event) => event.stopPropagation()}
@@ -914,6 +923,7 @@ const ShotListWorkspace: React.FC<Props> = ({
                       </td>
                       <td>
                         <textarea
+                          aria-label={`Shot ${shot.number} description`}
                           value={shot.description}
                           rows={wrappedRowCount(shot.description, columnWidths.description)}
                           onChange={(event) => updateShot(activeScene.id, shot.id, { description: event.target.value })}
@@ -928,11 +938,12 @@ const ShotListWorkspace: React.FC<Props> = ({
                           onChange={(subjects) => updateShot(activeScene.id, shot.id, { subjects })}
                         />
                       </td>
-                      <td><input value={shot.framing} onChange={(event) => updateShot(activeScene.id, shot.id, { framing: event.target.value })} onClick={(event) => event.stopPropagation()} /></td>
-                      <td><input value={shot.movement} onChange={(event) => updateShot(activeScene.id, shot.id, { movement: event.target.value })} onClick={(event) => event.stopPropagation()} /></td>
-                      <td><input value={shot.setup} onChange={(event) => updateShot(activeScene.id, shot.id, { setup: event.target.value })} onClick={(event) => event.stopPropagation()} /></td>
+                      <td><input aria-label={`Shot ${shot.number} framing`} value={shot.framing} onChange={(event) => updateShot(activeScene.id, shot.id, { framing: event.target.value })} onClick={(event) => event.stopPropagation()} /></td>
+                      <td><input aria-label={`Shot ${shot.number} movement`} value={shot.movement} onChange={(event) => updateShot(activeScene.id, shot.id, { movement: event.target.value })} onClick={(event) => event.stopPropagation()} /></td>
+                      <td><input aria-label={`Shot ${shot.number} setup`} value={shot.setup} onChange={(event) => updateShot(activeScene.id, shot.id, { setup: event.target.value })} onClick={(event) => event.stopPropagation()} /></td>
                       <td>
                         <select
+                          aria-label={`Shot ${shot.number} status`}
                           value={shot.status}
                           className={`shot-status status-${shot.status}`}
                           onChange={(event) => updateShot(activeScene.id, shot.id, { status: event.target.value as ShotStatus })}
@@ -944,20 +955,23 @@ const ShotListWorkspace: React.FC<Props> = ({
                       <td>
                         <div className="shot-canvas-cell" onClick={(event) => event.stopPropagation()}>
                           {linkedScene ? (
-                            <button className="shot-link-btn linked" onClick={() => onOpenCanvas(activeScene.id, shot.id)}>
-                              Open
-                            </button>
+                            <>
+                              <button className="shot-link-btn linked" onClick={() => onOpenShot(activeScene.id, shot.id, 'canvas')} title={`2D plan · ${linkedScene.name} (C)`}>2D</button>
+                              <button className="shot-link-btn linked" onClick={() => onOpenShot(activeScene.id, shot.id, 'previs')} title={`${shot.previsShotId ? 'Open this shot\'s camera' : 'Create this shot\'s camera'} in 3D (V)`}>3D</button>
+                            </>
                           ) : (
-                            <button className={`shot-link-btn ${hasBrokenLink ? 'broken' : ''}`} onClick={() => onCreateCanvas(activeScene.id, shot.id)}>
-                              {hasBrokenLink ? 'Missing' : 'New'}
+                            <button className={`shot-link-btn ${hasBrokenLink ? 'broken' : ''}`} onClick={() => onOpenShot(activeScene.id, shot.id, 'canvas')}>
+                              {hasBrokenLink ? 'Missing' : 'Create set'}
                             </button>
                           )}
                           <select
                             value=""
-                            aria-label={`Link canvas for shot ${shot.number}`}
-                            onChange={(event) => onLinkCanvas(activeScene.id, shot.id, event.target.value || undefined)}
+                            aria-label={`Stage shot ${shot.number} in another set`}
+                            title={shot.linkedSceneId ? 'This shot has its own set' : 'Uses the scene set'}
+                            onChange={(event) => onLinkCanvas(activeScene.id, shot.id, event.target.value === '__scene' ? undefined : event.target.value || undefined)}
                           >
-                            <option value="">Link…</option>
+                            <option value="">{shot.linkedSceneId ? '● Own set' : '⋯'}</option>
+                            {shot.linkedSceneId && <option value="__scene">Use the scene set</option>}
                             {savedScenes.map((scene) => <option key={scene.id} value={scene.id}>{scene.name}</option>)}
                           </select>
                         </div>
@@ -1024,30 +1038,39 @@ const ShotListWorkspace: React.FC<Props> = ({
               <label>Camera and lens<input value={selectedShot.cameraLens} onChange={(event) => updateShot(activeScene.id, selectedShot.id, { cameraLens: event.target.value })} /></label>
               <label>Setup<input value={selectedShot.setup} onChange={(event) => updateShot(activeScene.id, selectedShot.id, { setup: event.target.value })} /></label>
               <label>Production notes<textarea rows={4} value={selectedShot.notes} onChange={(event) => updateShot(activeScene.id, selectedShot.id, { notes: event.target.value })} /></label>
-              <div className="shot-canvas-card">
-                <span className="shot-eyebrow">Linked canvas</span>
-                {selectedShot.linkedSceneId && savedSceneById.has(selectedShot.linkedSceneId) ? (
-                  <>
-                    <strong>{savedSceneById.get(selectedShot.linkedSceneId)?.name}</strong>
-                    <div className="shot-canvas-actions">
-                      <button className="shot-add-btn" onClick={() => onOpenCanvas(activeScene.id, selectedShot.id)}>Open canvas</button>
-                      <button className="shot-action-btn" onClick={() => onLinkCanvas(activeScene.id, selectedShot.id, undefined)}>Unlink</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <strong>{selectedShot.linkedSceneId ? 'Linked canvas is missing' : 'No canvas linked'}</strong>
-                    <button className="shot-add-btn" onClick={() => onCreateCanvas(activeScene.id, selectedShot.id)}>Create canvas</button>
-                  </>
-                )}
-                <select
-                  value={selectedShot.linkedSceneId && savedSceneById.has(selectedShot.linkedSceneId) ? selectedShot.linkedSceneId : ''}
-                  onChange={(event) => onLinkCanvas(activeScene.id, selectedShot.id, event.target.value || undefined)}
-                >
-                  <option value="">Choose an existing canvas…</option>
-                  {savedScenes.map((scene) => <option key={scene.id} value={scene.id}>{scene.name}</option>)}
-                </select>
-              </div>
+              {(() => {
+                const setId = shotSetId(activeScene, selectedShot);
+                const set = setId ? savedSceneById.get(setId) : undefined;
+                return (
+                  <div className="shot-canvas-card">
+                    <span className="shot-eyebrow">Set &amp; camera</span>
+                    {set ? (
+                      <>
+                        <strong>{set.name}</strong>
+                        <small>{selectedShot.linkedSceneId ? 'This shot has its own set' : `Scene ${activeScene.number} set`} · {selectedShot.previsShotId ? '3D camera ready' : 'no 3D camera yet'}</small>
+                        <div className="shot-canvas-actions">
+                          <button className="shot-add-btn" onClick={() => onOpenShot(activeScene.id, selectedShot.id, 'canvas')}>2D plan</button>
+                          <button className="shot-action-btn" onClick={() => onOpenShot(activeScene.id, selectedShot.id, 'previs')}>{selectedShot.previsShotId ? 'Open in 3D' : 'Compose in 3D'}</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <strong>{setId ? 'The set is missing' : 'No set yet'}</strong>
+                        <button className="shot-add-btn" onClick={() => onOpenShot(activeScene.id, selectedShot.id, 'canvas')}>Create a set for scene {activeScene.number}</button>
+                      </>
+                    )}
+                    <select value="" onChange={(event) => onLinkCanvas(activeScene.id, selectedShot.id, event.target.value === '__scene' ? undefined : event.target.value || undefined)}>
+                      <option value="">Stage this shot in another set…</option>
+                      {selectedShot.linkedSceneId && <option value="__scene">Use the scene set</option>}
+                      {savedScenes.map((scene) => <option key={scene.id} value={scene.id}>{scene.name}</option>)}
+                    </select>
+                  </div>
+                );
+              })()}
+              {(() => {
+                const previsShot = savedSceneById.get(shotSetId(activeScene, selectedShot) ?? '')?.previs?.shots.find(s => s.id === selectedShot.previsShotId);
+                return previsShot?.reference ? <img className="shot-previs-reference" src={previsShot.reference.dataUrl} alt={`3D reference for shot ${selectedShot.number}`} /> : null;
+              })()}
             </div>
           ) : (
             <div className="shot-inspector-empty">

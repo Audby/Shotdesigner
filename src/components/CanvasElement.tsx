@@ -282,7 +282,7 @@ const CanvasElement: React.FC<Props> = ({
                 stroke={selectionColor}
                 strokeWidth={2}
                 draggable
-                dragBoundFunc={function(this: Konva.Node, pos) {
+                dragBoundFunc={(pos) => {
                   const parent = groupRef.current;
                   if (!parent) return pos;
                   const transform = parent.getAbsoluteTransform().copy().invert();

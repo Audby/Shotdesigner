@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Scene, SceneElement, ElementTemplate, Tool, ShotListProject, WorkspaceMode } from './types';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Scene, SceneElement, ElementTemplate, Tool, Shot, ShotListProject, WorkspaceMode } from './types';
 import {
   createScene,
   createElementFromTemplate,
@@ -14,46 +14,83 @@ import {
   duplicateElement,
 } from './utils/sceneUtils';
 import { useHistory } from './hooks/useHistory';
+import { useWorkspacePanels } from './hooks/useWorkspacePanels';
 import { elementTemplates } from './data/elementLibrary';
 import SceneCanvas, { SceneCanvasHandle } from './components/SceneCanvas';
 import ElementLibrary from './components/ElementLibrary';
 import PropertiesPanel from './components/PropertiesPanel';
 import Toolbar from './components/Toolbar';
+import ShortcutDialog from './components/ShortcutDialog';
 import ElementList from './components/ElementList';
 import ShotListWorkspace from './components/ShotListWorkspace';
 import {
   browseForShotList,
+  createShot,
   createShotListProject,
   exportShotListProject,
   getShotListsStorageLabel,
   makeShotListSnapshot,
+  nextShotNumber,
   normalizeShotListProject,
   saveShotListAs,
   saveShotListProject,
+  sceneForSet,
+  shotSetId,
+  shotsInSet,
 } from './utils/shotListUtils';
+import ShotContextBar from './components/ShotContextBar';
 import { exportShotListCsv, importShotListCsv } from './utils/shotListCsv';
 import Konva from 'konva';
+const PrevisWorkspace = lazy(() => import('./previs/PrevisWorkspace'));
+import type { PrevisScene, Vec3 } from './previs/types';
+import { createPrevisScene, createPrevisShot, reconcilePrevis } from './previs/model';
+
+/** Each shot is a camera in its scene's set; the first visit creates it from the shot's lens. */
+function ensureShotCamera(data: PrevisScene, shot: Shot, activeCameraId: string | null) {
+  const existing = data.shots.find((camera) => camera.id === shot.previsShotId);
+  if (existing) return { data, cameraId: existing.id, created: false };
+  const from = data.shots.find((camera) => camera.id === activeCameraId) ?? data.shots[0];
+  const first = from?.keyframes[0];
+  const camera = createPrevisShot(`${shot.number}${shot.description ? ` · ${shot.description.slice(0, 32)}` : ''}`, first?.position as Vec3 | undefined, first?.target as Vec3 | undefined);
+  const lens = Number(/(\d+(?:\.\d+)?)\s*mm/i.exec(shot.cameraLens)?.[1]);
+  camera.keyframes[0].lens = lens >= 8 && lens <= 300 ? lens : first?.lens ?? 35;
+  return { data: { ...data, shots: [...data.shots, camera] }, cameraId: camera.id, created: true };
+}
 
 function App() {
   const {
-    state: elements,
-    set: setElements,
+    state: content,
+    set: setContent,
     undo,
     redo,
     canUndo,
     canRedo,
-    reset: resetElements,
-  } = useHistory<SceneElement[]>([]);
+    reset: resetContent,
+  } = useHistory<{ elements: SceneElement[]; previs?: PrevisScene }>({ elements: [] });
+  const elements = content.elements;
+  const setElements = useCallback((next: SceneElement[] | ((prev: SceneElement[]) => SceneElement[])) => {
+    setContent(prev => ({ ...prev, elements: typeof next === 'function' ? next(prev.elements) : next }));
+  }, [setContent]);
+  const resetElements = useCallback((next: SceneElement[], nextPrevis?: PrevisScene) => {
+    resetContent({ elements: next, previs: nextPrevis });
+  }, [resetContent]);
+  const [activePrevisShotId, setActivePrevisShotId] = useState<string | null>(null);
 
   const [scene, setScene] = useState<Scene>(createScene);
   const [workspace, setWorkspace] = useState<WorkspaceMode>('canvas');
-  const [shotList, setShotList] = useState<ShotListProject>(createShotListProject);
+  const previs = useMemo(() => content.previs ?? (workspace === 'previs' ? createPrevisScene(scene, elements) : undefined), [content.previs, workspace, scene, elements]);
+  const { state: shotList, set: setShotList, replace: replaceShotList, reset: resetShotList, undo: undoShotList, redo: redoShotList, canUndo: canUndoShotList, canRedo: canRedoShotList } = useHistory<ShotListProject>(useMemo(createShotListProject, []));
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [selectedShotListSceneId, setSelectedShotListSceneId] = useState('');
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
+  // The shot-list scene and shot being staged in the open set.
+  const [shotContext, setShotContext] = useState<{ sceneId: string; shotId: string | null } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [tool, setTool] = useState<Tool>('select');
   const [showGrid, setShowGrid] = useState(true);
   const [gridSnap, setGridSnap] = useState(true);
+  const canvasPanels = useWorkspacePanels();
+  const { leftOpen: canvasLibraryOpen, rightOpen: canvasInspectorOpen } = canvasPanels;
   const [leftPanel, setLeftPanel] = useState<'library' | 'layers'>('library');
   const [showToast, setShowToast] = useState<string | null>(null);
   const [uiScale, setUiScale] = useState(() => {
@@ -81,11 +118,12 @@ function App() {
       gridStyle: s.gridStyle,
       gridColor: s.gridColor,
       elements: els,
+      previs: s.previs,
     });
   const [savedSnapshot, setSavedSnapshot] = useState<string>(() => makeSnapshot(scene, []));
   const isDirty = useMemo(
-    () => makeSnapshot(scene, elements) !== savedSnapshot,
-    [scene, elements, savedSnapshot]
+    () => makeSnapshot({ ...scene, previs }, elements) !== savedSnapshot,
+    [scene, elements, previs, savedSnapshot]
   );
   const [savedShotListSnapshot, setSavedShotListSnapshot] = useState<string>(
     () => makeShotListSnapshot(shotList),
@@ -237,14 +275,18 @@ function App() {
   );
 
   const handleSave = useCallback(() => {
-    const saveResult = saveSceneToLocalStorage({ ...scene, elements });
-    setScene(saveResult.scene);
-    setSavedSnapshot(makeSnapshot(saveResult.scene, elements));
-    toast(`Scene saved to ${saveResult.relativePath}`);
-  }, [scene, elements, toast]);
+    try {
+      const saveResult = saveSceneToLocalStorage({ ...scene, elements, previs });
+      setScene(saveResult.scene);
+      setSavedSnapshot(makeSnapshot(saveResult.scene, elements));
+      toast(`Scene saved to ${saveResult.relativePath}`);
+    } catch {
+      toast('Could not save. Your work is still open. Use Export JSON to keep a copy; large models may exceed browser storage.');
+    }
+  }, [scene, elements, previs, toast]);
 
   const handleSaveAs = useCallback(async () => {
-    const result = await saveSceneAs({ ...scene, elements });
+    const result = await saveSceneAs({ ...scene, elements, previs });
     if (result.status === 'canceled') return;
     if (result.status === 'error') {
       toast('Save As failed');
@@ -253,13 +295,14 @@ function App() {
     setScene(result.scene);
     setSavedSnapshot(makeSnapshot(result.scene, elements));
     toast(`Saved to ${result.relativePath}`);
-  }, [scene, elements, toast]);
+  }, [scene, elements, previs, toast]);
 
   const handleLoad = useCallback(
     (s: Scene) => {
       if (!confirmDiscard()) return;
       setScene(s);
-      resetElements(s.elements);
+      resetElements(s.elements, s.previs);
+      setWorkspace('canvas');
       setSelectedIds([]);
       setShowGrid(s.showGrid);
       setSavedSnapshot(makeSnapshot(s, s.elements));
@@ -269,9 +312,9 @@ function App() {
   );
 
   const handleExport = useCallback(() => {
-    exportSceneToFile({ ...scene, elements });
+    exportSceneToFile({ ...scene, elements, previs });
     toast('Exported!');
-  }, [scene, elements, toast]);
+  }, [scene, elements, previs, toast]);
 
   const handleBrowse = useCallback(async () => {
     const result = await browseForScene();
@@ -287,11 +330,13 @@ function App() {
     if (!confirmDiscard()) return;
     try {
       const imported = await importSceneFromFile();
+      setWorkspace('canvas');
       setScene(imported);
-      resetElements(imported.elements);
+      resetElements(imported.elements, imported.previs);
       setSelectedIds([]);
       toast(`Imported: ${imported.name} — save to keep it`);
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       toast('Import failed');
     }
   }, [confirmDiscard, resetElements, toast]);
@@ -318,6 +363,7 @@ function App() {
 
   const handleNew = useCallback(() => {
     if (!confirmDiscard()) return;
+    setWorkspace('canvas');
     const s = createScene();
     setScene(s);
     resetElements([]);
@@ -327,22 +373,23 @@ function App() {
   }, [confirmDiscard, resetElements, toast]);
 
   const handleDuplicateScene = useCallback(() => {
-    const duplicatedScene = duplicateScene({ ...scene, elements });
+    const duplicatedScene = duplicateScene({ ...scene, elements, previs });
     const saveResult = saveSceneToLocalStorage(duplicatedScene);
+    setWorkspace('canvas');
     setScene(saveResult.scene);
-    resetElements(saveResult.scene.elements);
+    resetElements(saveResult.scene.elements, saveResult.scene.previs);
     setSelectedIds([]);
     setShowGrid(saveResult.scene.showGrid);
     setSavedSnapshot(makeSnapshot(saveResult.scene, saveResult.scene.elements));
     toast(`Duplicated to ${saveResult.relativePath}`);
-  }, [elements, resetElements, scene, toast]);
+  }, [elements, previs, resetElements, scene, toast]);
 
   const handleShotListSave = useCallback(() => {
     const result = saveShotListProject(shotList);
-    setShotList(result.project);
+    replaceShotList(result.project);
     setSavedShotListSnapshot(makeShotListSnapshot(result.project));
     toast(`Shot list saved to ${result.relativePath}`);
-  }, [shotList, toast]);
+  }, [shotList, toast, replaceShotList]);
 
   const handleShotListSaveAs = useCallback(async () => {
     const result = await saveShotListAs(shotList);
@@ -351,21 +398,21 @@ function App() {
       toast('Shot-list Save As failed');
       return;
     }
-    setShotList(result.project);
+    replaceShotList(result.project);
     setSavedShotListSnapshot(makeShotListSnapshot(result.project));
     toast(`Shot list saved to ${result.relativePath}`);
-  }, [shotList, toast]);
+  }, [shotList, toast, replaceShotList]);
 
   const handleShotListLoad = useCallback((project: ShotListProject) => {
     if (!confirmShotListDiscard()) return;
     const normalized = normalizeShotListProject(project);
-    setShotList(normalized);
+    resetShotList(normalized);
     setSelectedShotListSceneId(normalized.scenes[0]?.id ?? '');
     setSelectedShotId(null);
     setSavedShotListSnapshot(makeShotListSnapshot(normalized));
     setWorkspace('shotList');
     toast(`Loaded shot list: ${normalized.name}`);
-  }, [confirmShotListDiscard, toast]);
+  }, [confirmShotListDiscard, toast, resetShotList]);
 
   const handleShotListBrowse = useCallback(async () => {
     const result = await browseForShotList();
@@ -380,12 +427,12 @@ function App() {
   const handleShotListNew = useCallback(() => {
     if (!confirmShotListDiscard()) return;
     const project = createShotListProject();
-    setShotList(project);
+    resetShotList(project);
     setSelectedShotListSceneId(project.scenes[0]?.id ?? '');
     setSelectedShotId(null);
     setSavedShotListSnapshot(makeShotListSnapshot(project));
     toast('New shot list created');
-  }, [confirmShotListDiscard, toast]);
+  }, [confirmShotListDiscard, toast, resetShotList]);
 
   const handleShotListCsvImport = useCallback(async () => {
     if (!confirmShotListDiscard()) return;
@@ -395,12 +442,12 @@ function App() {
       toast('CSV import failed');
       return;
     }
-    setShotList(result.project);
+    resetShotList(result.project);
     setSelectedShotListSceneId(result.project.scenes[0]?.id ?? '');
     setSelectedShotId(result.project.scenes[0]?.shots[0]?.id ?? null);
     setSavedShotListSnapshot('');
     toast(`Imported ${result.fileName} — save to keep it`);
-  }, [confirmShotListDiscard, toast]);
+  }, [confirmShotListDiscard, toast, resetShotList]);
 
   const handleShotListLinkCanvas = useCallback((
     shotListSceneId: string,
@@ -412,58 +459,157 @@ function App() {
       scenes: project.scenes.map((shotListScene) => shotListScene.id === shotListSceneId
         ? {
             ...shotListScene,
-            shots: shotListScene.shots.map((shot) => shot.id === shotId
-              ? { ...shot, linkedSceneId }
-              : shot),
+            shots: shotListScene.shots.map((shot) => {
+              if (shot.id !== shotId) return shot;
+              // A camera belongs to one set; moving the shot to another set drops the link.
+              const next = { ...shot, linkedSceneId };
+              if (!linkedSceneId) delete next.linkedSceneId;
+              if (shotSetId(shotListScene, next) !== shotSetId(shotListScene, shot)) delete next.previsShotId;
+              return next;
+            }),
           }
         : shotListScene),
     }));
-  }, []);
+  }, [setShotList]);
 
-  const handleCreateCanvasForShot = useCallback((shotListSceneId: string, shotId: string) => {
-    if (!confirmDiscard()) return;
-    const shotListScene = shotList.scenes.find((item) => item.id === shotListSceneId);
-    const shot = shotListScene?.shots.find((item) => item.id === shotId);
-    if (!shot || !shotListScene) return;
+  const handleLinkSceneSet = useCallback((shotListSceneId: string, setId?: string) => {
+    setShotList((project) => ({
+      ...project,
+      scenes: project.scenes.map((item) => {
+        if (item.id !== shotListSceneId) return item;
+        const next = { ...item, linkedSceneId: setId };
+        if (!setId) delete next.linkedSceneId;
+        return {
+          ...next,
+          shots: item.shots.map((shot) => (shot.linkedSceneId || item.linkedSceneId === setId ? shot : { ...shot, previsShotId: undefined })),
+        };
+      }),
+    }));
+  }, [setShotList]);
 
-    const label = shot.description.trim()
-      ? `${shot.number} – ${shot.description.trim().slice(0, 48)}`
-      : `${shot.number} – ${shotListScene.title}`;
-    const createdScene = createScene(label);
-    const saveResult = saveSceneToLocalStorage(createdScene);
-    setScene(saveResult.scene);
-    resetElements(saveResult.scene.elements);
-    setSelectedIds([]);
-    setShowGrid(saveResult.scene.showGrid);
-    setSavedSnapshot(makeSnapshot(saveResult.scene, saveResult.scene.elements));
-    handleShotListLinkCanvas(shotListSceneId, shotId, saveResult.scene.id);
-    setWorkspace('canvas');
-    toast(`Canvas created for shot ${shot.number}`);
-  }, [confirmDiscard, handleShotListLinkCanvas, resetElements, shotList.scenes, toast]);
-
-  const handleOpenCanvasForShot = useCallback((shotListSceneId: string, shotId: string) => {
-    if (!confirmDiscard()) return;
-    const shot = shotList.scenes
-      .find((item) => item.id === shotListSceneId)
-      ?.shots.find((item) => item.id === shotId);
-    if (!shot?.linkedSceneId) return;
-    const linkedScene = getSavedScenes().find((savedScene) => savedScene.id === shot.linkedSceneId);
-    if (!linkedScene) {
-      toast('The linked canvas could not be found');
+  /** Opens a shot-list scene (or one shot) in its set, creating the set and the shot's camera as needed. */
+  const handleOpenShot = useCallback((shotListSceneId: string, shotId: string | null, target: 'canvas' | 'previs') => {
+    const listScene = shotList.scenes.find((item) => item.id === shotListSceneId);
+    if (!listScene) return;
+    const shot = shotId ? listScene.shots.find((item) => item.id === shotId) : undefined;
+    const setId = shotSetId(listScene, shot);
+    let target3d = setId === scene.id ? { ...scene, elements, previs } : setId ? getSavedScenes().find((item) => item.id === setId) : undefined;
+    if (setId && !target3d) {
+      toast('The set for this shot could not be found. Choose another set in the shot list.');
       return;
     }
-    setScene(linkedScene);
-    resetElements(linkedScene.elements);
+    const switching = !target3d || target3d.id !== scene.id;
+    if (switching && !confirmDiscard()) return;
+    if (!target3d) {
+      const created = saveSceneToLocalStorage(createScene(`Scene ${listScene.number}${listScene.title ? ` – ${listScene.title}` : ''}`)).scene;
+      target3d = { ...created, previs: undefined };
+      handleLinkSceneSet(listScene.id, created.id);
+      toast(`Set created for scene ${listScene.number}. Draw the plan, then stage each shot in 3D.`);
+    }
+    let data = target3d.previs;
+    let cameraId: string | null = null;
+    if (target === 'previs') {
+      data = reconcilePrevis(data ?? createPrevisScene(target3d, target3d.elements), target3d.elements);
+      if (shot) {
+        const ensured = ensureShotCamera(data, shot, activePrevisShotId);
+        data = ensured.data;
+        cameraId = ensured.cameraId;
+        if (ensured.created)
+          setShotList((project) => ({ ...project, scenes: project.scenes.map((item) => ({ ...item,
+            shots: item.shots.map((s) => (s.id === shot.id ? { ...s, previsShotId: ensured.cameraId } : s)) })) }));
+      }
+    }
+    if (switching) {
+      setScene(target3d);
+      resetElements(target3d.elements, data);
+      setShowGrid(target3d.showGrid);
+      setSavedSnapshot(makeSnapshot(target3d, target3d.elements));
+    } else if (data !== previs) setContent({ elements, previs: data });
+    if (cameraId) setActivePrevisShotId(cameraId);
     setSelectedIds([]);
-    setShowGrid(linkedScene.showGrid);
-    setSavedSnapshot(makeSnapshot(linkedScene, linkedScene.elements));
-    setWorkspace('canvas');
-    toast(`Opened canvas: ${linkedScene.name}`);
-  }, [confirmDiscard, resetElements, shotList.scenes, toast]);
+    setShotContext({ sceneId: listScene.id, shotId: shot?.id ?? null });
+    setWorkspace(target);
+  }, [shotList.scenes, scene, elements, previs, activePrevisShotId, confirmDiscard, handleLinkSceneSet, resetElements, setContent, setShotList, toast]);
+
+  // The scene being staged in the open set, and its shots.
+  const contextScene = useMemo(() => sceneForSet(shotList, scene.id, shotContext?.sceneId), [shotList, scene.id, shotContext?.sceneId]);
+  const contextShots = useMemo(() => (contextScene ? shotsInSet(contextScene, scene.id) : []), [contextScene, scene.id]);
+  const contextShotId = workspace === 'previs'
+    ? contextShots.find((shot) => shot.previsShotId && shot.previsShotId === activePrevisShotId)?.id ?? null
+    : contextShots.find((shot) => shot.id === shotContext?.shotId)?.id ?? null;
+
+  const handleWorkspaceChange = useCallback((next: WorkspaceMode) => {
+    if (next === 'previs') {
+      let nextPrevis = reconcilePrevis(previs ?? createPrevisScene(scene, elements), elements);
+      // Arriving from the 2D plan with a shot in focus opens that shot's camera.
+      const shot = contextShots.find((item) => item.id === shotContext?.shotId);
+      if (shot) {
+        const ensured = ensureShotCamera(nextPrevis, shot, activePrevisShotId);
+        nextPrevis = ensured.data;
+        if (ensured.created)
+          setShotList((project) => ({ ...project, scenes: project.scenes.map((item) => ({ ...item,
+            shots: item.shots.map((s) => (s.id === shot.id ? { ...s, previsShotId: ensured.cameraId } : s)) })) }));
+        setActivePrevisShotId(ensured.cameraId);
+      }
+      if (nextPrevis !== previs) setContent({ elements, previs: nextPrevis });
+    }
+    setWorkspace(next);
+  }, [previs, scene, elements, setContent, contextShots, shotContext?.shotId, activePrevisShotId, setShotList]);
+
+  const handleLinkPrevisShot = useCallback((shotId: string, cameraId: string) => {
+    setShotList(project => ({ ...project, scenes: project.scenes.map(s => ({ ...s,
+      shots: s.shots.map(shot => {
+        if (shot.id !== shotId) return shot;
+        // Shots already staged in this set through their scene keep that link.
+        const own = s.linkedSceneId === scene.id ? shot.linkedSceneId : scene.id;
+        const next = { ...shot, previsShotId: cameraId, linkedSceneId: own };
+        if (!own) delete next.linkedSceneId;
+        return next;
+      }),
+    })) }));
+  }, [scene.id, setShotList]);
+
+  const selectContextShot = useCallback((shotId: string) => {
+    const shot = contextShots.find((item) => item.id === shotId);
+    if (!shot || !contextScene) return;
+    setShotContext({ sceneId: contextScene.id, shotId });
+    setSelectedShotListSceneId(contextScene.id);
+    setSelectedShotId(shotId);
+    if (workspace !== 'previs' || !previs) return;
+    const ensured = ensureShotCamera(previs, shot, activePrevisShotId);
+    if (ensured.created) {
+      setContent({ elements, previs: ensured.data });
+      setShotList((project) => ({ ...project, scenes: project.scenes.map((item) => ({ ...item,
+        shots: item.shots.map((s) => (s.id === shotId ? { ...s, previsShotId: ensured.cameraId } : s)) })) }));
+    }
+    setActivePrevisShotId(ensured.cameraId);
+  }, [contextShots, contextScene, workspace, previs, activePrevisShotId, elements, setContent, setShotList]);
+
+  const addContextShot = useCallback(() => {
+    if (!contextScene) return;
+    const shot = createShot(nextShotNumber(contextScene));
+    setShotList((project) => ({ ...project, scenes: project.scenes.map((item) => (item.id === contextScene.id ? { ...item, shots: [...item.shots, shot] } : item)) }));
+    // The new shot needs a scene set to live in; a set-less scene adopts the open one.
+    if (!contextScene.linkedSceneId) handleShotListLinkCanvas(contextScene.id, shot.id, scene.id);
+    setShotContext({ sceneId: contextScene.id, shotId: shot.id });
+    if (workspace === 'previs' && previs) {
+      const ensured = ensureShotCamera(previs, shot, activePrevisShotId);
+      setContent({ elements, previs: ensured.data });
+      setShotList((project) => ({ ...project, scenes: project.scenes.map((item) => ({ ...item,
+        shots: item.shots.map((s) => (s.id === shot.id ? { ...s, previsShotId: ensured.cameraId } : s)) })) }));
+      setActivePrevisShotId(ensured.cameraId);
+    }
+  }, [contextScene, workspace, previs, activePrevisShotId, elements, scene.id, setContent, setShotList, handleShotListLinkCanvas]);
+
+  const updateContextShot = useCallback((shotId: string, patch: Partial<Shot>) => {
+    setShotList((project) => ({ ...project, scenes: project.scenes.map((item) => ({ ...item,
+      shots: item.shots.map((s) => (s.id === shotId ? { ...s, ...patch } : s)) })) }));
+  }, [setShotList]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector('dialog[open]')) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
@@ -477,8 +623,10 @@ function App() {
         }
         return;
       }
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (workspace === 'shotList') return;
+      if (e.target instanceof HTMLElement && (e.target.matches('input, textarea, select') || e.target.isContentEditable)) return;
+      if (e.key === '?' && !mod) { e.preventDefault(); setShortcutsOpen(true); return; }
+      if (workspace === 'shotList' && mod && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redoShotList(); else undoShotList(); return; }
+      if (workspace !== 'canvas') return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') handleDeleteSelected();
       if (!mod && (e.key === 'v' || e.key === 'V')) setTool('select');
@@ -532,7 +680,7 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, selectedIds, elements, scene.gridSize, workspace, handleDeleteSelected, handleDuplicate, handleSave, handleSaveAs, handleShotListSave, handleShotListSaveAs, setElements, undo, redo]);
+  }, [selectedId, selectedIds, elements, scene.gridSize, workspace, handleDeleteSelected, handleDuplicate, handleSave, handleSaveAs, handleShotListSave, handleShotListSaveAs, setElements, undo, redo, undoShotList, redoShotList]);
 
   // Resizable divider drag handler
   const startResize = useCallback(
@@ -563,8 +711,9 @@ function App() {
   return (
     <div className="app" style={{ fontSize: `${uiScale * 100}%` }}>
       <Toolbar
+        onShowShortcuts={() => setShortcutsOpen(true)}
         workspace={workspace}
-        onWorkspaceChange={setWorkspace}
+        onWorkspaceChange={handleWorkspaceChange}
         isDirty={isDirty}
         sceneName={scene.name}
         onSceneNameChange={(name) => setScene((s) => ({ ...s, name }))}
@@ -584,16 +733,34 @@ function App() {
         onNew={handleNew}
         onDuplicateScene={handleDuplicateScene}
         scenesStorageLabel={getScenesStorageLabel()}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
+        onUndo={workspace === 'shotList' ? undoShotList : undo}
+        onRedo={workspace === 'shotList' ? redoShotList : redo}
+        canUndo={workspace === 'shotList' ? canUndoShotList : canUndo}
+        canRedo={workspace === 'shotList' ? canRedoShotList : canRedo}
         uiScale={uiScale}
         onUiScaleChange={setUiScale}
       />
 
+      {shortcutsOpen && <ShortcutDialog workspace={workspace} onClose={() => setShortcutsOpen(false)} />}
+      {workspace !== 'shotList' && contextScene && (
+        <ShotContextBar
+          scene={contextScene}
+          shots={contextShots}
+          activeShotId={contextShotId}
+          workspace={workspace}
+          onSelectShot={selectContextShot}
+          onAddShot={addContextShot}
+          onUpdateShot={updateContextShot}
+          onOpenShotList={() => {
+            setSelectedShotListSceneId(contextScene.id);
+            if (contextShotId) setSelectedShotId(contextShotId);
+            setWorkspace('shotList');
+          }}
+        />
+      )}
       {workspace === 'canvas' ? (
-        <div className="main-content">
+        <div className={`main-content ${canvasLibraryOpen ? '' : 'canvas-library-closed'} ${canvasInspectorOpen ? '' : 'canvas-inspector-closed'}`}>
+        <div className="canvas-panel-toggles"><button aria-pressed={canvasLibraryOpen} onClick={() => canvasPanels.toggleLeft()}>☷ Library</button><span>2D BLOCKING & LIGHTING</span><button aria-pressed={canvasInspectorOpen} onClick={() => canvasPanels.toggleRight()}>Inspector ☷</button></div>
         <div className="left-sidebar" style={{ width: leftWidth * uiScale }}>
           <div className="sidebar-tabs">
             <button
@@ -662,6 +829,31 @@ function App() {
           />
         </div>
         </div>
+      ) : workspace === 'previs' && previs ? (
+        <Suspense fallback={<p className="pv-loading">Opening 3D Studio…</p>}>
+        <PrevisWorkspace
+          key={scene.id}
+          scene={scene}
+          elements={elements}
+          data={previs}
+          shotList={shotList}
+          activeShotId={activePrevisShotId}
+          onActiveShotChange={(id) => {
+            setActivePrevisShotId(id);
+            const shot = contextShots.find((item) => item.previsShotId === id);
+            if (contextScene) setShotContext({ sceneId: contextScene.id, shotId: shot?.id ?? null });
+          }}
+          shotLabels={Object.fromEntries(contextShots.filter((shot) => shot.previsShotId).map((shot) => [shot.previsShotId!, shot.number]))}
+          onChange={(nextPrevis, nextElements) => setContent({ elements: nextElements, previs: nextPrevis })}
+          onLinkShot={handleLinkPrevisShot}
+          onSave={handleSave}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          toast={toast}
+        />
+        </Suspense>
       ) : (
         <ShotListWorkspace
           project={shotList}
@@ -669,7 +861,7 @@ function App() {
           uiScale={uiScale}
           selectedSceneId={selectedShotListSceneId}
           selectedShotId={selectedShotId}
-          savedScenes={getSavedScenes()}
+          savedScenes={[{ ...scene, elements, previs }, ...getSavedScenes().filter(s => s.id !== scene.id)]}
           storageLabel={getShotListsStorageLabel()}
           onProjectChange={setShotList}
           onSelectScene={setSelectedShotListSceneId}
@@ -688,13 +880,13 @@ function App() {
             exportShotListProject(shotList);
             toast('Shot list exported as JSON');
           }}
-          onCreateCanvas={handleCreateCanvasForShot}
-          onOpenCanvas={handleOpenCanvasForShot}
+          onOpenShot={handleOpenShot}
+          onLinkSceneSet={handleLinkSceneSet}
           onLinkCanvas={handleShotListLinkCanvas}
         />
       )}
 
-      {showToast && <div className="toast">{showToast}</div>}
+      {showToast && <div className="toast" role="status">{showToast}</div>}
     </div>
   );
 }

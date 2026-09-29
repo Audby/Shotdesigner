@@ -70,8 +70,9 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
       }
     };
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    const observer = new ResizeObserver(updateSize);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   // Middle mouse panning
@@ -132,6 +133,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
       target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (document.querySelector('dialog[open]') || e.defaultPrevented) return;
       if (e.code === 'Space' && !isTyping(e.target)) {
         e.preventDefault();
         setSpaceHeld(true);
@@ -212,7 +214,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
       x: pointer.x - mousePointTo.x * clampedScale,
       y: pointer.y - mousePointTo.y * clampedScale,
     });
-  }, []);
+  }, [stageRef]);
 
   const getCanvasPointer = useCallback(() => {
     const stage = stageRef.current;
@@ -223,7 +225,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
       x: (pointer.x - stage.x()) / stage.scaleX(),
       y: (pointer.y - stage.y()) / stage.scaleY(),
     };
-  }, []);
+  }, [stageRef]);
 
   // Marquee: mousedown on empty area starts selection rectangle
   const handleStageMouseDown = useCallback(
@@ -244,7 +246,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
         }
       }
     },
-    [tool, spaceHeld, onSelect, getCanvasPointer]
+    [tool, spaceHeld, onSelect, getCanvasPointer, stageRef]
   );
 
   const handleStageMouseMove = useCallback(
@@ -335,7 +337,7 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
       onAdd(newElement);
       onSelect([newElement.id]);
     },
-    [onAdd, onSelect, gridSize, gridSnap, elements.length]
+    [onAdd, onSelect, gridSize, gridSnap, elements.length, stageRef]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -685,9 +687,9 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
             ref={transformerRef}
             rotateEnabled={true}
             enabledAnchors={enabledAnchors}
-            borderStroke="#6366f1"
+            borderStroke="#d6b57c"
             borderStrokeWidth={1.5}
-            anchorFill="#6366f1"
+            anchorFill="#d6b57c"
             anchorStroke="#ffffff"
             anchorSize={9}
             anchorCornerRadius={2}
@@ -761,8 +763,8 @@ const SceneCanvas = React.forwardRef<SceneCanvasHandle, Props>(({
               y={marquee.y}
               width={marquee.width}
               height={marquee.height}
-              fill="rgba(99, 102, 241, 0.08)"
-              stroke="#6366f1"
+              fill="rgba(214, 181, 124, 0.08)"
+              stroke="#d6b57c"
               strokeWidth={1 / stageScale}
               dash={[6 / stageScale, 4 / stageScale]}
               listening={false}

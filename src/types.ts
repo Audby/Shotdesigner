@@ -1,3 +1,5 @@
+import type { PrevisScene } from './previs/types';
+
 export interface SceneElement {
   id: string;
   type: string;
@@ -57,6 +59,9 @@ export interface Scene {
   storageFileName?: string;
   /** Absolute path when the scene lives outside the scenes folder (via Save As / Browse) */
   storageFilePath?: string;
+  previs?: PrevisScene;
+  /** Default 3D treatment for schematic walls; leaves the 2D drawing intact. */
+  wallStyle?: 'built' | 'cave';
   stageWidth: number;
   stageHeight: number;
   backgroundColor: string;
@@ -84,12 +89,15 @@ export interface Shot {
   status: ShotStatus;
   notes: string;
   linkedSceneId?: string;
+  previsShotId?: string;
 }
 
 export interface ShotListScene {
   id: string;
   number: string;
   title: string;
+  /** The set (2D plan and 3D studio) this scene is staged in; shots use it unless they link their own. */
+  linkedSceneId?: string;
   shots: Shot[];
 }
 
@@ -139,4 +147,4 @@ export interface CategoryInfo {
 }
 
 export type Tool = 'select' | 'pan' | 'measure';
-export type WorkspaceMode = 'canvas' | 'shotList';
+export type WorkspaceMode = 'canvas' | 'shotList' | 'previs';

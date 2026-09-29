@@ -3,6 +3,7 @@ import { Tool, Scene, WorkspaceMode } from '../types';
 import { getSavedScenes, deleteScene } from '../utils/sceneUtils';
 
 interface Props {
+  onShowShortcuts: () => void;
   workspace: WorkspaceMode;
   onWorkspaceChange: (workspace: WorkspaceMode) => void;
   isDirty: boolean;
@@ -56,6 +57,7 @@ const formatWhen = (iso: string): string => {
 
 const Toolbar: React.FC<Props> = ({
   workspace,
+  onShowShortcuts,
   onWorkspaceChange,
   isDirty,
   sceneName,
@@ -100,13 +102,15 @@ const Toolbar: React.FC<Props> = ({
 
   useEffect(() => {
     if (!showSceneMenu) return;
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowSceneMenu(false); };
+    document.addEventListener('keydown', escape);
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowSceneMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('keydown', escape); };
   }, [showSceneMenu]);
 
   const handleDeleteScene = (e: React.MouseEvent, scene: Scene) => {
@@ -118,53 +122,49 @@ const Toolbar: React.FC<Props> = ({
   };
 
   return (
-    <div className="toolbar">
-      <div className="toolbar-left">
+    <header className="toolbar">
+      <div className="toolbar-top">
         <div className="app-logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="2.5" y="8" width="19" height="12.5" rx="2.5" fill="var(--accent)" opacity="0.16" stroke="var(--accent)" strokeWidth="1.8" />
-            <path d="M3 8l2.8-4.6a2 2 0 0 1 1.7-1L20 2.5a1.5 1.5 0 0 1 1.4 2.1L20 8" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M8.2 7.6l2.4-4.4M13.4 7.4l2.4-4.4" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" />
-            <circle cx="12" cy="14.5" r="2.6" stroke="var(--accent-light)" strokeWidth="1.6" />
-          </svg>
-          <span className="app-title">Shot Designer</span>
+          <svg width="28" height="28" viewBox="0 0 28 28" {...stroke}><path d="M3 10V4h6M19 4h6v6M25 18v6h-6M9 24H3v-6" /><path d="m11 9 8 5-8 5z" /></svg>
+          <span className="app-title">shot<span>designer</span><small>THE FILMMAKER’S WORKSPACE</small></span>
         </div>
-
-        <div className="workspace-switcher" aria-label="Workspace">
-          <button
-            className={workspace === 'canvas' ? 'active' : ''}
-            onClick={() => onWorkspaceChange('canvas')}
-          >
-            Canvas
-          </button>
-          <button
-            className={workspace === 'shotList' ? 'active' : ''}
-            onClick={() => onWorkspaceChange('shotList')}
-          >
-            Shot List
-          </button>
-        </div>
-
-        {workspace === 'canvas' && (
-          <>
-            <div className="toolbar-divider" />
-            <div className="scene-name-wrapper">
-              <input
-                type="text"
-                className="scene-name-input"
-                value={sceneName}
-                onChange={(e) => onSceneNameChange(e.target.value)}
-                title="Scene name"
-              />
-              {isDirty && <span className="dirty-dot" title="Unsaved changes" />}
+        {workspace !== 'shotList' && <div className="scene-name-wrapper"><span className="document-label">SCENE</span><input className="scene-name-input" value={sceneName} onChange={e => onSceneNameChange(e.target.value)} aria-label="Scene name" /><span className={`save-status ${isDirty ? 'unsaved' : ''}`}>{isDirty ? 'Unsaved changes' : 'Saved'}</span></div>}
+        <div className="toolbar-right">
+          {workspace !== 'shotList' && <>
+            <div className="dropdown-wrapper" ref={dropdownRef}>
+              <button className="header-button" aria-expanded={showSceneMenu} onClick={toggleSceneMenu}>File <span>⌄</span></button>
+              {showSceneMenu && <div className="dropdown-menu file-menu">
+                <span className="menu-eyebrow">SCENE FILE</span>
+                <button onClick={() => { onNew(); setShowSceneMenu(false); }}>New scene <kbd>＋</kbd></button>
+                <button onClick={() => { onDuplicateScene(); setShowSceneMenu(false); }}>Duplicate scene</button>
+                <button onClick={() => { onBrowse(); setShowSceneMenu(false); }}>Open scene file…</button>
+                <button onClick={() => { onSaveAs(); setShowSceneMenu(false); }}>Save as… <kbd>⇧⌘S</kbd></button>
+                <div className="menu-rule" />
+                <button onClick={() => { onImport(); setShowSceneMenu(false); }}>Import JSON…</button>
+                <button onClick={() => { onExport(); setShowSceneMenu(false); }}>Export JSON</button>
+                {workspace === 'canvas' && <button onClick={() => { onExportImage(); setShowSceneMenu(false); }}>Export diagram as PNG</button>}
+                <div className="menu-rule" />
+                <span className="menu-eyebrow">RECENT SCENES</span>
+                <div className="recent-scenes">{savedScenes.map(s => <div className="recent-scene" key={s.id}><button onClick={() => { onLoad(s); setShowSceneMenu(false); }}><span>{s.name}</span><small>{formatWhen(s.updatedAt)}</small></button><button aria-label={`Delete ${s.name}`} onClick={e => handleDeleteScene(e, s)}>×</button></div>)}</div>
+                {!savedScenes.length && <p className="dropdown-empty">Your saved scenes will appear here.</p>}
+                <div className="menu-rule" />
+                <label className="ui-scale-control">Panel scale<input aria-label="Panel scale" type="range" min="0.7" max="1.4" step="0.05" value={uiScale} onChange={e => onUiScaleChange(parseFloat(e.target.value))} /><span>{Math.round(uiScale * 100)}%</span></label>
+                <p className="dropdown-note">Saved in {scenesStorageLabel}</p>
+              </div>}
             </div>
-          </>
-        )}
+            <button className="header-button save-scene-button" onClick={onSave} title="Save scene (⌘/Ctrl+S)">Save scene <span>↗</span></button>
+          </>}
+          <button className="header-button" onClick={onShowShortcuts} title="Keyboard shortcuts (?)">Shortcuts <kbd>?</kbd></button>
+          {workspace === 'shotList' && <span className="header-context">PLAN THE DAY. FIND THE FRAME.</span>}
+        </div>
       </div>
-
-      <div className="toolbar-center">
-        {workspace === 'canvas' ? (
-          <>
+      <div className="toolbar-bottom">
+        <nav className="workspace-switcher" aria-label="Workspace">
+          {([['shotList', '01', 'Shot list'], ['canvas', '02', '2D plan'], ['previs', '03', '3D studio']] as const).map(([id, number, label]) => <button key={id} className={workspace === id ? 'active' : ''} aria-current={workspace === id ? 'page' : undefined} onClick={() => onWorkspaceChange(id)}><span>{number}</span>{label}</button>)}
+        </nav>
+        <div className="toolbar-center">
+          {workspace === 'shotList' && <div className="tool-group"><button className="tool-btn" disabled={!canUndo} onClick={onUndo} title="Undo (⌘/Ctrl+Z)">↶</button><button className="tool-btn" disabled={!canRedo} onClick={onRedo} title="Redo (⌘/Ctrl+Shift+Z)">↷</button></div>}
+          {workspace === 'canvas' ? <>
         <div className="tool-group">
           <button
             className={`tool-btn ${tool === 'select' ? 'active' : ''}`}
@@ -227,151 +227,11 @@ const Toolbar: React.FC<Props> = ({
             </svg>
           </button>
         </div>
-          </>
-        ) : (
-          <span className="shot-list-toolbar-title">Production planning</span>
-        )}
-      </div>
 
-      <div className="toolbar-right">
-        {workspace === 'canvas' && (
-          <>
-        <div className="tool-group">
-          <button className="tool-btn" onClick={onNew} title="New Scene">
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z" />
-              <path d="M14 3v6h6M12 12v6M9 15h6" />
-            </svg>
-          </button>
-          <button className="tool-btn" onClick={onDuplicateScene} title="Duplicate Current Scene">
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <rect x="9" y="9" width="12" height="12" rx="2" />
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-          </button>
-          <div className="dropdown-wrapper" ref={dropdownRef}>
-            <button
-              className={`tool-btn ${showSceneMenu ? 'active' : ''}`}
-              onClick={toggleSceneMenu}
-              title={`Open Scene from ${scenesStorageLabel}`}
-            >
-              <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-                <path d="M4 20h14a2 2 0 0 0 2-1.5l1.7-7A2 2 0 0 0 19.8 9H8.6a2 2 0 0 0-2 1.5L4 20zm0 0V5a2 2 0 0 1 2-2h4l2 3h6a2 2 0 0 1 2 2v1" />
-              </svg>
-            </button>
-            {showSceneMenu && (
-              <div className="dropdown-menu">
-                <div className="dropdown-note">Saved in {scenesStorageLabel}</div>
-                {savedScenes.map((s) => (
-                  <div
-                    key={s.id}
-                    className="dropdown-item"
-                    onClick={() => { onLoad(s); setShowSceneMenu(false); }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { onLoad(s); setShowSceneMenu(false); } }}
-                  >
-                    <span className="dropdown-scene-name">{s.name}</span>
-                    <span className="dropdown-meta">
-                      <span className="dropdown-date">{formatWhen(s.updatedAt)}</span>
-                      <button
-                        className="dropdown-delete"
-                        onClick={(e) => handleDeleteScene(e, s)}
-                        title={`Delete "${s.name}"`}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" {...stroke}>
-                          <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
-                        </svg>
-                      </button>
-                    </span>
-                  </div>
-                ))}
-                {savedScenes.length === 0 && (
-                  <div className="dropdown-empty">No saved scenes yet</div>
-                )}
-                <div className="dropdown-footer">
-                  <button
-                    className="dropdown-browse"
-                    onClick={() => { setShowSceneMenu(false); onBrowse(); }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" {...stroke}>
-                      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.2 3.9A2 2 0 0 0 7.5 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z" />
-                      <circle cx="11.5" cy="12.5" r="2.5" />
-                      <path d="M13.3 14.3L15.5 16.5" />
-                    </svg>
-                    Browse for a scene file…
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          <button
-            className={`tool-btn save-btn ${isDirty ? 'needs-save' : ''}`}
-            onClick={onSave}
-            title={`Save to ${scenesStorageLabel} (Ctrl+S)`}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <path d="M17 21v-8H7v8M7 3v5h8" />
-            </svg>
-            {isDirty && <span className="save-dot" />}
-          </button>
-          <button
-            className="tool-btn"
-            onClick={onSaveAs}
-            title="Save As… choose a file and folder (Ctrl+Shift+S)"
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v6" />
-              <path d="M7 3v5h8M7 21v-6h5" />
-              <path d="M18 15v6M15 18h6" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="toolbar-divider" />
-
-        <div className="tool-group">
-          <button className="tool-btn" onClick={onImport} title="Import scene file (JSON)">
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12" />
-            </svg>
-          </button>
-          <button className="tool-btn" onClick={onExport} title="Export scene file (JSON)">
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-            </svg>
-          </button>
-          <button className="tool-btn" onClick={onExportImage} title="Export as PNG image">
-            <svg width="17" height="17" viewBox="0 0 24 24" {...stroke}>
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="9" cy="9" r="2" />
-              <path d="M21 15l-4.5-4.5L6 21" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="toolbar-divider" />
-          </>
-        )}
-
-        <div className="ui-scale-control" title="UI Scale">
-          <svg width="14" height="14" viewBox="0 0 24 24" {...stroke} opacity="0.55">
-            <path d="M21 3l-6 6M21 3h-5M21 3v5M3 21l6-6M3 21h5M3 21v-5" />
-          </svg>
-          <input
-            type="range"
-            min="0.7"
-            max="1.4"
-            step="0.05"
-            value={uiScale}
-            onChange={(e) => onUiScaleChange(parseFloat(e.target.value))}
-            className="ui-scale-slider"
-          />
-          <span className="ui-scale-label">{Math.round(uiScale * 100)}%</span>
+          </> : <span className="workspace-description">{workspace === 'previs' ? 'Build the space. Compose the shot.' : 'Your story, one shot at a time.'}</span>}
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 

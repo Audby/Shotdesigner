@@ -32,7 +32,7 @@ export function createScene(name: string = 'Untitled Scene'): Scene {
     elements: [],
     stageWidth: 4000,
     stageHeight: 4000,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#202928',
     gridSize: 20,
     showGrid: true,
     gridStyle: 'lines',
@@ -181,8 +181,12 @@ export function importSceneFromFile(): Promise<Scene> {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
+    input.hidden = true;
+    document.body.appendChild(input);
+    input.oncancel = () => { input.remove(); reject(new DOMException('No file selected', 'AbortError')); };
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
+      input.remove();
       if (!file) return reject(new Error('No file selected'));
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -195,6 +199,7 @@ export function importSceneFromFile(): Promise<Scene> {
           reject(new Error('Invalid file format'));
         }
       };
+      reader.onerror = () => reject(new Error('Could not read the scene file'));
       reader.readAsText(file);
     };
     input.click();
@@ -232,8 +237,8 @@ export async function browseForScene(): Promise<SceneBrowseResult> {
   try {
     const scene = await importSceneFromFile();
     return { status: 'ok', scene };
-  } catch {
-    return { status: 'error' };
+  } catch (error) {
+    return { status: error instanceof DOMException && error.name === 'AbortError' ? 'canceled' : 'error' };
   }
 }
 

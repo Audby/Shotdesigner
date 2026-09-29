@@ -83,6 +83,7 @@ const normalizeShot = (value: unknown): Shot => {
     status: asStatus(source.status),
     notes: asString(source.notes),
     ...(asString(source.linkedSceneId) ? { linkedSceneId: asString(source.linkedSceneId) } : {}),
+    ...(asString(source.previsShotId) ? { previsShotId: asString(source.previsShotId) } : {}),
   };
 };
 
@@ -92,6 +93,7 @@ const normalizeScene = (value: unknown, index: number): ShotListScene => {
     id: asString(source.id) || uuidv4(),
     number: asString(source.number, String(index + 1)),
     title: asString(source.title, 'Untitled Scene'),
+    ...(asString(source.linkedSceneId) ? { linkedSceneId: asString(source.linkedSceneId) } : {}),
     shots: Array.isArray(source.shots) ? source.shots.map(normalizeShot) : [],
   };
 };
@@ -298,3 +300,22 @@ export async function saveShotListAs(project: ShotListProject): Promise<ShotList
   exportShotListProject(nextProject);
   return { status: 'ok', project: nextProject, relativePath: 'your downloads folder' };
 }
+
+export const nextShotNumber = (scene: ShotListScene): string => {
+  const index = scene.shots.length;
+  const suffix = index < 26 ? String.fromCharCode(65 + index) : String(index + 1);
+  return `${scene.number}${suffix}`;
+};
+
+/** The set a shot is staged in: its own link, or its scene's set. */
+export const shotSetId = (scene: ShotListScene, shot?: Shot): string | undefined => shot?.linkedSceneId ?? scene.linkedSceneId;
+
+/** The shot-list scene staged in a set, preferring the one the user last opened. */
+export function sceneForSet(project: ShotListProject, setId: string, preferredSceneId?: string): ShotListScene | undefined {
+  const uses = (scene: ShotListScene) => scene.linkedSceneId === setId || scene.shots.some((shot) => shot.linkedSceneId === setId);
+  const preferred = project.scenes.find((scene) => scene.id === preferredSceneId);
+  return preferred && uses(preferred) ? preferred : project.scenes.find(uses);
+}
+
+/** Shots of a scene that are staged in the given set. */
+export const shotsInSet = (scene: ShotListScene, setId: string) => scene.shots.filter((shot) => shotSetId(scene, shot) === setId);

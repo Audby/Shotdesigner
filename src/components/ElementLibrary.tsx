@@ -24,27 +24,6 @@ const ElementLibrary: React.FC<Props> = ({ onAddElement }) => {
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  const getCategoryColor = (cat: string): string => {
-    const colors: Record<string, string> = {
-      characters: '#4FC3F7',
-      cameras: '#B0BEC5',
-      lighting: '#FFF176',
-      audio: '#BDBDBD',
-      furniture: '#8D6E63',
-      props: '#A1887F',
-      vehicles: '#546E7A',
-      workshop: '#FBC02D',
-      set: '#795548',
-      shapes: '#9E9E9E',
-      text: '#E0E0E0',
-      markers: '#F44336',
-      nature: '#4CAF50',
-      cave: '#6D4C41',
-      house: '#BCAAA4',
-    };
-    return colors[cat] || '#9E9E9E';
-  };
-
   return (
     <div className="element-library">
       <div className="library-header">
@@ -58,7 +37,7 @@ const ElementLibrary: React.FC<Props> = ({ onAddElement }) => {
         </svg>
         <input
           type="text"
-          placeholder="Search elements..."
+          placeholder="Find an element…" aria-label="Search elements"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -67,31 +46,12 @@ const ElementLibrary: React.FC<Props> = ({ onAddElement }) => {
         )}
       </div>
 
-      {!search && (
-        <div className="category-tabs">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              className={`category-tab ${activeCategory === cat.id ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat.id)}
-              title={cat.label}
-              style={{
-                borderColor: activeCategory === cat.id ? getCategoryColor(cat.id) : 'transparent',
-                color: activeCategory === cat.id ? getCategoryColor(cat.id) : undefined
-              }}
-            >
-              <span className="cat-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: cat.icon }} />
-              </span>
-              <span className="cat-label">{cat.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {!search && <label className="library-category-label">Category<select aria-label="Element category" value={activeCategory} onChange={e => setActiveCategory(e.target.value)}>{categories.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}</select></label>}
+      <div className="library-section-label">{search ? `${filtered.length} results` : categories.find(c => c.id === activeCategory)?.label}<span>Click or drag to place</span></div>
 
       <div className="element-grid">
         {filtered.map((template) => (
-          <div
+          <button
             key={template.type}
             className="element-item"
             draggable
@@ -110,7 +70,7 @@ const ElementLibrary: React.FC<Props> = ({ onAddElement }) => {
               />
             </div>
             <span className="element-name">{template.label}</span>
-          </div>
+          </button>
         ))}
         {filtered.length === 0 && (
           <div className="no-results">No elements found</div>

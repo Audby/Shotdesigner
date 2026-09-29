@@ -1,9 +1,13 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === 'development' && !process.argv.includes('--shotdesigner-desktop');
 
-const projectRootPath = process.cwd();
+const workspaceArgument = process.argv.find((argument) => argument.startsWith('--shotdesigner-workspace='));
+const projectRootPath = workspaceArgument
+  ? path.resolve(workspaceArgument.slice('--shotdesigner-workspace='.length))
+  : process.cwd();
+app.setName('Shot Designer');
 const workspaceAppDataPath = path.join(projectRootPath, 'appdata');
 const scenesPath = path.join(projectRootPath, 'scenes');
 const shotListsPath = path.join(projectRootPath, 'shotlists');
@@ -86,7 +90,7 @@ function createWindow() {
     minHeight: 700,
     title: 'Shot Designer',
     icon: path.join(__dirname, 'icon.png'),
-    backgroundColor: '#0f0f17',
+    backgroundColor: '#19211f',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -103,7 +107,30 @@ function createWindow() {
     show: false,
   });
 
-  Menu.setApplicationMenu(null);
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      { role: 'appMenu' },
+      { role: 'editMenu' },
+      { role: 'windowMenu' },
+    ]));
+  } else {
+    Menu.setApplicationMenu(null);
+  }
+
+  // Electron silently cancels renderer beforeunload unless we provide a native choice.
+  win.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'question',
+      buttons: ['Keep editing', 'Discard changes and close'],
+      defaultId: 0,
+      cancelId: 0,
+      title: 'Unsaved changes',
+      message: 'Close Shot Designer without saving?',
+      detail: 'Your scene or shot list has unsaved changes. Choose Keep editing to save them first.',
+      noLink: true,
+    });
+    if (choice === 1) event.preventDefault();
+  });
 
   win.once('ready-to-show', () => {
     win.show();

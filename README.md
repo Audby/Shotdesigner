@@ -1,73 +1,42 @@
-# React + TypeScript + Vite
+# Shot Designer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A local filmmaking workspace for shot lists, 2D blocking and lighting diagrams, and interactive 3D previsualization. Built with React, TypeScript, Konva, Three.js, and Electron.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+On macOS, double-click **Open Shot Designer.command** in this folder. It builds
+the current version and opens the desktop app directly from local files, without
+starting a web server. The small Terminal window can be closed after the app
+opens. Quit Shot Designer with **⌘Q**, **Quit** in the app menu, or by
+closing its window. Your scene files stay in `scenes/` and shot lists in `shotlists/`.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm install
+npm run dev          # Browser workspace
+npm run electron:dev # Desktop workspace with native scene files
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+For development only: stop either command by pressing **Control-C** in the
+Terminal window where you started it, then close the browser tab. Closing a
+browser tab alone does not stop a development server. The double-click launcher
+does not need either development command.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Plan a shot
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. **Shot list** — create scenes, describe coverage, assign subjects, track readiness, and link a diagram. Use Project tools for the subject library, glossary, and shortcuts.
+2. **2D plan** — search or choose an element category, place blocking and lighting symbols, and edit their properties. Library and Inspector can be hidden to give the plan more space.
+3. **3D studio** — build the set, then choose Compose shot. Drag to pan/tilt, shift-drag to truck, and scroll to dolly. Choose a subject and a framing preset in the Camera inspector. Set another composition later on the timeline to create a camera move.
+
+See [3D_STUDIO.md](3D_STUDIO.md) for camera controls, model imports, reference exports, and current limits.
+
+Scene operations live under File, with Save scene always visible. The shot list saves separately. The browser stores saved documents locally; export JSON for a portable copy. The Electron version provides native file storage. Built-in 3D assets and system fonts work offline.
+
+## Checks
+
+```sh
+npm test
+npm run lint
+npm run build
 ```
+
+Tests cover diagram/3D synchronization, camera projection and interpolation, direct camera controls, framing presets, procedural model bounds, and shot-list/CSV compatibility.
